@@ -1,5 +1,5 @@
 [Unit]
-Description=PartyPlay – lokale TV+Handy Partyspiele (Schach, UNO, Quiz)
+Description=PartyPlay – lokale TV+Handy Partyspiele (Schach, Farbrausch, Quiz)
 After=network-online.target
 Wants=network-online.target
 

@@ -1,5 +1,5 @@
 'use strict';
-/* PartyPlay – lokaler Party-Server: TV = Host, Handys = Player. Schach / UNO / Quiz. Keine Cloud. */
+/* PartyPlay – lokaler Party-Server: TV = Host, Handys = Player. Schach / Farbrausch / Quiz. Keine Cloud. */
 const express = require('express');
 const http = require('http');
 const path = require('path');
@@ -24,13 +24,13 @@ const io = new Server(server, { cors: { origin: '*' } });
 const QUIZ = [
   { q: 'Wie viele Felder hat ein Schachbrett?', choices: ['32', '48', '64', '81'], a: 2 },
   { q: 'Welche Farbe beginnt beim Schach?', choices: ['Schwarz', 'Weiß', 'Los entscheidet', 'Beide gleichzeitig'], a: 1 },
-  { q: 'Wie viele Karten hat ein UNO-Deck (klassisch)?', choices: ['52', '99', '108', '120'], a: 2 },
+  { q: 'Wie viele Karten hat ein Farbrausch-Deck (klassisch)?', choices: ['52', '99', '108', '120'], a: 2 },
   { q: 'Was bedeutet "Schachmatt"?', choices: ['Unentschieden', 'König ist angegriffen und kann nicht entkommen', 'Zeit abgelaufen', 'Figurentausch'], a: 1 },
   { q: 'Welcher Planet ist der Sonne am nächsten?', choices: ['Venus', 'Merkur', 'Mars', 'Erde'], a: 1 },
-  { q: 'Wie viele Spieler braucht man mindestens für UNO?', choices: ['1', '2', '4', '6'], a: 1 },
+  { q: 'Wie viele Spieler braucht man mindestens für Farbrausch?', choices: ['1', '2', '4', '6'], a: 1 },
   { q: 'Springer-Zug im Schach?', choices: ['1 gerade + 1 diagonal', 'L-Form: 2+1', 'Nur diagonal', '3 gerade'], a: 1 },
   { q: 'Bundeshauptstadt von Deutschland?', choices: ['Hamburg', 'München', 'Berlin', 'Köln'], a: 2 },
-  { q: 'UNO: Was musst du bei letzter Karte rufen?', choices: ['Fertig', 'UNO', 'Letzte', 'Stop'], a: 1 },
+  { q: 'Farbrausch: Was musst du bei letzter Karte rufen?', choices: ['Fertig', 'Farbrausch', 'Letzte', 'Stop'], a: 1 },
   { q: 'Wie viele Minuten hat eine Stunde?', choices: ['30', '60', '90', '100'], a: 1 },
 ];
 
@@ -49,7 +49,7 @@ function roomState(room) {
     players: [...room.players.values()].map(p => ({ id: p.id, name: p.name })),
     quiz: room.quiz ? { qIndex: room.quiz.qIndex, total: QUIZ.length, scores: room.quiz.scores, phase: room.quiz.phase, current: room.quiz.phase === 'question' ? { q: QUIZ[room.quiz.qIndex].q, choices: QUIZ[room.quiz.qIndex].choices } : null, lastResult: room.quiz.lastResult || null } : null,
     chess: room.chess ? { board: room.chess.board, turn: room.chess.turn, history: room.chess.history, white: nameOf(room, room.chess.whiteId), black: nameOf(room, room.chess.blackId) } : null,
-    uno: room.uno ? { top: room.uno.discard[room.uno.discard.length - 1], color: room.uno.color, turn: nameOf(room, room.uno.order[room.uno.turnIdx]), counts: room.uno.order.map(id => ({ name: nameOf(room, id), n: (room.uno.hands[id] || []).length })), winner: room.uno.winner ? nameOf(room, room.uno.winner) : null } : null,
+    fr: room.fr ? { top: room.fr.discard[room.fr.discard.length - 1], color: room.fr.color, turn: nameOf(room, room.fr.order[room.fr.turnIdx]), counts: room.fr.order.map(id => ({ name: nameOf(room, id), n: (room.fr.hands[id] || []).length })), winner: room.fr.winner ? nameOf(room, room.fr.winner) : null } : null,
   };
 }
 function nameOf(room, id) { const p = room.players.get(id); return p ? p.name : null; }
@@ -135,33 +135,33 @@ function tryMove(chess, fromS, toS) {
   return { ok: true };
 }
 
-// ---------- UNO (vereinfacht) ----------
-let unoId = 1;
-function buildUnoDeck() {
+// ---------- Farbrausch (vereinfacht) ----------
+let frId = 1;
+function buildFrDeck() {
   const d = [];
   for (const c of ['R', 'G', 'B', 'Y']) {
-    d.push({ id: unoId++, color: c, value: '0' });
-    for (let v = 1; v <= 9; v++) { d.push({ id: unoId++, color: c, value: String(v) }); d.push({ id: unoId++, color: c, value: String(v) }); }
-    for (const s of ['S', 'R', '+2']) { d.push({ id: unoId++, color: c, value: s }); d.push({ id: unoId++, color: c, value: s }); }
+    d.push({ id: frId++, color: c, value: '0' });
+    for (let v = 1; v <= 9; v++) { d.push({ id: frId++, color: c, value: String(v) }); d.push({ id: frId++, color: c, value: String(v) }); }
+    for (const s of ['S', 'R', '+2']) { d.push({ id: frId++, color: c, value: s }); d.push({ id: frId++, color: c, value: s }); }
   }
-  for (let i = 0; i < 4; i++) { d.push({ id: unoId++, color: 'W', value: 'W' }); d.push({ id: unoId++, color: 'W', value: '+4' }); }
+  for (let i = 0; i < 4; i++) { d.push({ id: frId++, color: 'W', value: 'W' }); d.push({ id: frId++, color: 'W', value: '+4' }); }
   for (let i = d.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[d[i], d[j]] = [d[j], d[i]]; }
   return d;
 }
-function unoPlayable(card, top, color) {
+function frPlayable(card, top, color) {
   if (card.color === 'W') return true;
   return card.color === color || card.value === top.value;
 }
-function unoDraw(room, pid, n) {
+function frDraw(room, pid, n) {
   for (let i = 0; i < n; i++) {
-    if (!room.uno.deck.length) {
-      const top = room.uno.discard.pop();
-      room.uno.deck = room.uno.discard.splice(0);
-      for (let k = room.uno.deck.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1));[room.uno.deck[k], room.uno.deck[j]] = [room.uno.deck[j], room.uno.deck[k]]; }
-      room.uno.discard = [top];
-      if (!room.uno.deck.length) break;
+    if (!room.fr.deck.length) {
+      const top = room.fr.discard.pop();
+      room.fr.deck = room.fr.discard.splice(0);
+      for (let k = room.fr.deck.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1));[room.fr.deck[k], room.fr.deck[j]] = [room.fr.deck[j], room.fr.deck[k]]; }
+      room.fr.discard = [top];
+      if (!room.fr.deck.length) break;
     }
-    room.uno.hands[pid].push(room.uno.deck.pop());
+    room.fr.hands[pid].push(room.fr.deck.pop());
   }
 }
 
@@ -172,7 +172,7 @@ io.on('connection', (socket) => {
   socket.on('create-room', ({ name, game }, cb) => {
     try {
       const code = newCode();
-      const room = { code, players: new Map(), game: game || 'quiz', quiz: null, chess: null, uno: null, hostId: socket.id };
+      const room = { code, players: new Map(), game: game || 'quiz', quiz: null, chess: null, fr: null, hostId: socket.id };
       rooms.set(code, room);
       socket.join(code);
       socket.data.code = code;
@@ -248,55 +248,55 @@ io.on('connection', (socket) => {
     broadcast(room.code);
   });
 
-  // UNO
-  socket.on('uno:start', () => {
+  // Farbrausch
+  socket.on('fr:start', () => {
     const room = rooms.get(socket.data.code); if (!room) return;
-    room.game = 'uno';
+    room.game = 'fr';
     const order = [...room.players.keys()];
-    const deck = buildUnoDeck();
+    const deck = buildFrDeck();
     const hands = {};
     for (const id of order) { hands[id] = []; for (let i = 0; i < 7; i++) hands[id].push(deck.pop()); }
     let top = deck.pop();
     while (top.color === 'W') { deck.unshift(top); top = deck.pop(); }
-    room.uno = { order, hands, deck, discard: [top], color: top.color, turnIdx: 0, dir: 1, winner: null };
+    room.fr = { order, hands, deck, discard: [top], color: top.color, turnIdx: 0, dir: 1, winner: null };
     broadcast(room.code);
   });
-  socket.on('uno:play', ({ cardId, color }, cb) => {
-    const room = rooms.get(socket.data.code); if (!room || !room.uno || room.uno.winner) return cb && cb({ ok: false, err: 'Kein UNO-Spiel' });
+  socket.on('fr:play', ({ cardId, color }, cb) => {
+    const room = rooms.get(socket.data.code); if (!room || !room.fr || room.fr.winner) return cb && cb({ ok: false, err: 'Kein Farbrausch-Spiel' });
     const pid = socket.id;
-    if (room.uno.order[room.uno.turnIdx] !== pid) return cb && cb({ ok: false, err: 'Nicht am Zug' });
-    const hand = room.uno.hands[pid];
+    if (room.fr.order[room.fr.turnIdx] !== pid) return cb && cb({ ok: false, err: 'Nicht am Zug' });
+    const hand = room.fr.hands[pid];
     const idx = hand.findIndex(c => c.id === cardId);
     if (idx < 0) return cb && cb({ ok: false, err: 'Karte nicht auf der Hand' });
     const card = hand[idx];
-    const top = room.uno.discard[room.uno.discard.length - 1];
-    if (!unoPlayable(card, top, room.uno.color)) return cb && cb({ ok: false, err: 'Passt nicht (Farbe/Wert)' });
+    const top = room.fr.discard[room.fr.discard.length - 1];
+    if (!frPlayable(card, top, room.fr.color)) return cb && cb({ ok: false, err: 'Passt nicht (Farbe/Wert)' });
     hand.splice(idx, 1);
-    room.uno.discard.push(card);
-    room.uno.color = card.color === 'W' ? (['R', 'G', 'B', 'Y'].includes(color) ? color : 'R') : card.color;
-    const n = room.uno.order.length;
-    const step = (s) => { room.uno.turnIdx = (room.uno.turnIdx + s * room.uno.dir + n * 10) % n; };
-    if (card.value === 'R') { room.uno.dir *= -1; step(n === 2 ? 2 : 1); }
+    room.fr.discard.push(card);
+    room.fr.color = card.color === 'W' ? (['R', 'G', 'B', 'Y'].includes(color) ? color : 'R') : card.color;
+    const n = room.fr.order.length;
+    const step = (s) => { room.fr.turnIdx = (room.fr.turnIdx + s * room.fr.dir + n * 10) % n; };
+    if (card.value === 'R') { room.fr.dir *= -1; step(n === 2 ? 2 : 1); }
     else if (card.value === 'S') step(2);
-    else if (card.value === '+2') { const nxt = room.uno.order[(room.uno.turnIdx + room.uno.dir + n) % n]; unoDraw(room, nxt, 2); step(2); }
-    else if (card.value === '+4') { const nxt = room.uno.order[(room.uno.turnIdx + room.uno.dir + n) % n]; unoDraw(room, nxt, 4); step(2); }
+    else if (card.value === '+2') { const nxt = room.fr.order[(room.fr.turnIdx + room.fr.dir + n) % n]; frDraw(room, nxt, 2); step(2); }
+    else if (card.value === '+4') { const nxt = room.fr.order[(room.fr.turnIdx + room.fr.dir + n) % n]; frDraw(room, nxt, 4); step(2); }
     else step(1);
-    if (!hand.length) room.uno.winner = pid;
+    if (!hand.length) room.fr.winner = pid;
     broadcast(room.code);
     cb && cb({ ok: true });
   });
-  socket.on('uno:draw', (cb) => {
-    const room = rooms.get(socket.data.code); if (!room || !room.uno) return cb && cb({ ok: false });
-    if (room.uno.order[room.uno.turnIdx] !== socket.id) return cb && cb({ ok: false, err: 'Nicht am Zug' });
-    unoDraw(room, socket.id, 1);
-    room.uno.turnIdx = (room.uno.turnIdx + room.uno.dir + room.uno.order.length) % room.uno.order.length;
+  socket.on('fr:draw', (cb) => {
+    const room = rooms.get(socket.data.code); if (!room || !room.fr) return cb && cb({ ok: false });
+    if (room.fr.order[room.fr.turnIdx] !== socket.id) return cb && cb({ ok: false, err: 'Nicht am Zug' });
+    frDraw(room, socket.id, 1);
+    room.fr.turnIdx = (room.fr.turnIdx + room.fr.dir + room.fr.order.length) % room.fr.order.length;
     broadcast(room.code);
     cb && cb({ ok: true });
   });
 
-  socket.on('uno:hand', () => {
-    const room = rooms.get(socket.data.code); if (!room || !room.uno) return socket.emit('hand', []);
-    socket.emit('hand', room.uno.hands[socket.id] || []);
+  socket.on('fr:hand', () => {
+    const room = rooms.get(socket.data.code); if (!room || !room.fr) return socket.emit('hand', []);
+    socket.emit('hand', room.fr.hands[socket.id] || []);
   });
 
   socket.on('disconnect', () => {
@@ -305,7 +305,7 @@ io.on('connection', (socket) => {
     const room = rooms.get(code); if (!room) return;
     room.players.delete(socket.id);
     if (!room.players.size) { if (room.quiz?.timer) clearTimeout(room.quiz.timer); rooms.delete(code); return; }
-    if (room.uno) { room.uno.order = room.uno.order.filter(id => id !== socket.id); delete room.uno.hands[socket.id]; if (!room.uno.order.length) room.uno = null; else room.uno.turnIdx %= room.uno.order.length; }
+    if (room.fr) { room.fr.order = room.fr.order.filter(id => id !== socket.id); delete room.fr.hands[socket.id]; if (!room.fr.order.length) room.fr = null; else room.fr.turnIdx %= room.fr.order.length; }
     broadcast(code);
   });
 });
@@ -313,7 +313,7 @@ io.on('connection', (socket) => {
 function ensureGame(room, reset) {
   if (room.game === 'quiz' && (!room.quiz || reset)) room.quiz = { qIndex: 0, scores: Object.fromEntries([...room.players.keys()].map(id => [id, 0])), answers: {}, phase: 'lobby', lastResult: null, timer: null };
   if (room.game === 'chess' && (!room.chess || reset)) room.chess = { board: initBoard(), turn: 'w', history: [], whiteId: null, blackId: null };
-  if (room.game === 'uno' && (!room.uno || reset)) room.uno = null;
+  if (room.game === 'fr' && (!room.fr || reset)) room.fr = null;
 }
 function quizAsk(room) {
   if (room.quiz.timer) clearTimeout(room.quiz.timer);

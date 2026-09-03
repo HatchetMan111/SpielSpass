@@ -1,7 +1,7 @@
 {
   "name": "partyplay",
-  "version": "0.1.0",
-  "description": "Lokale TV+Handy Partyspiele (Schach, UNO vereinfacht, Quiz) fürs private Netzwerk – Proxmox LXC ready",
+  "version": "0.2.0",
+  "description": "Lokale TV+Handy Partyspiele (Schach, Farbrausch-Kartenspiel, Quiz) fürs private Netzwerk – Proxmox LXC ready",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

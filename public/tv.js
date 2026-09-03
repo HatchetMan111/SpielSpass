@@ -15,12 +15,12 @@ function render() {
   if (!S) return;
   document.getElementById('quizCtl').style.display = S.game === 'quiz' ? '' : 'none';
   document.getElementById('chessCtl').style.display = S.game === 'chess' ? '' : 'none';
-  document.getElementById('unoCtl').style.display = S.game === 'uno' ? '' : 'none';
+  document.getElementById('frCtl').style.display = S.game === 'fr' ? '' : 'none';
   playersEl.innerHTML = S.players.map(p => {
     let sc = ''; if (S.quiz) sc = ' – ' + (S.quiz.scores[p.id] || 0) + ' P';
     return '<div>• ' + esc(p.name) + sc + '</div>';
   }).join('') || '<span class="muted">Noch niemand verbunden – Code am Handy eingeben.</span>';
-  if (S.game === 'quiz') renderQuiz(); else if (S.game === 'chess') renderChess(); else renderUno();
+  if (S.game === 'quiz') renderQuiz(); else if (S.game === 'chess') renderChess(); else renderFr();
 }
 function renderQuiz() {
   if (!S.quiz || S.quiz.phase === 'lobby') { stage.innerHTML = '<div class="tv-big">Quiz bereit – „Quiz starten“ drücken</div>'; return; }
@@ -50,12 +50,12 @@ function renderChess() {
   h += `<div class="center muted">Am Zug: <b>${S.chess.turn === 'w' ? 'Weiß' : 'Schwarz'}</b> · Weiß: ${esc(S.chess.white || '–')} · Schwarz: ${esc(S.chess.black || '–')}<br>Zug am Handy eingeben (z.B. E2 → E4). Verlauf: ${esc((S.chess.history || []).join(' '))}</div>`;
   stage.innerHTML = h;
 }
-function renderUno() {
-  if (!S.uno) { stage.innerHTML = '<div class="tv-big">UNO bereit – „UNO geben“ drücken</div>'; return; }
-  const t = S.uno.top;
-  stage.innerHTML = `<div class="muted center">Am Zug: <b>${esc(S.uno.turn)}</b> · Aktive Farbe: <b>${esc(S.uno.color)}</b></div>
-    <div class="topcard U${S.uno.color}">${esc(t.value)} (${esc(t.color)})</div>
-    <div class="card">${S.uno.counts.map(c => `<div>• ${esc(c.name)}: ${c.n} Karten</div>`).join('')}</div>
-    ${S.uno.winner ? `<div class="tv-big">🏆 ${esc(S.uno.winner)} gewinnt!</div>` : ''}`;
+function renderFr() {
+  if (!S.fr) { stage.innerHTML = '<div class="tv-big">Farbrausch bereit – „Karten geben“ drücken</div>'; return; }
+  const t = S.fr.top;
+  stage.innerHTML = `<div class="muted center">Am Zug: <b>${esc(S.fr.turn)}</b> · Aktive Farbe: <b>${esc(S.fr.color)}</b></div>
+    <div class="topcard U${S.fr.color}">${esc(t.value)} (${esc(t.color)})</div>
+    <div class="card">${S.fr.counts.map(c => `<div>• ${esc(c.name)}: ${c.n} Karten</div>`).join('')}</div>
+    ${S.fr.winner ? `<div class="tv-big">🏆 ${esc(S.fr.winner)} gewinnt!</div>` : ''}`;
 }
 function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }

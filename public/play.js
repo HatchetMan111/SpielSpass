@@ -30,9 +30,9 @@ function render() {
       <button class="btn" onclick="move()">Ziehen</button>
       <p class="muted">Am Zug: ${S.chess.turn === 'w' ? 'Weiß' : 'Schwarz'} · Verlauf: ${esc((S.chess.history || []).join(' '))}</p></div>`;
   } else {
-    el.innerHTML = '<div class="card"><h2>UNO</h2><div id="hand"></div><button class="btn alt" onclick="draw()">Karte ziehen</button>' +
+    el.innerHTML = '<div class="card"><h2>Farbrausch</h2><div id="hand"></div><button class="btn alt" onclick="draw()">Karte ziehen</button>' +
       '<div class="row"><select id="wildc"><option value="R">Rot</option><option value="G">Grün</option><option value="B">Blau</option><option value="Y">Gelb</option></select></div>' +
-      '<p class="muted">Top: ' + (S.uno ? esc(S.uno.top.value + ' ' + S.uno.top.color) + ' · Farbe ' + esc(S.uno.color) + ' · am Zug ' + esc(S.uno.turn) : 'noch nicht gegeben') + '</p></div>';
+      '<p class="muted">Top: ' + (S.fr ? esc(S.fr.top.value + ' ' + S.fr.top.color) + ' · Farbe ' + esc(S.fr.color) + ' · am Zug ' + esc(S.fr.turn) : 'noch nicht gegeben') + '</p></div>';
     fetchHand();
   }
 }
@@ -42,12 +42,12 @@ function move() {
   const f = document.getElementById('from').value, t = document.getElementById('to').value;
   s.emit('chess:move', { from: f, to: t }, r => { if (!r.ok) alert(r.err); });
 }
-// UNO-Hand kommt per separatem State? Server sendet Hände nicht an alle – Workaround: per Socket erfragen.
+// Farbrausch-Hand kommt per separatem State? Server sendet Hände nicht an alle – Workaround: per Socket erfragen.
 // Minimal: Hände werden lokal über 'state' nicht übertragen (Geheimhaltung). Wir holen sie über eigenen Event.
 s.on('hand', cards => {
   const h = document.getElementById('hand'); if (!h) return;
-  h.innerHTML = '<div class="uno-hand">' + cards.map(c => `<div class="ucard U${c.color}" onclick="playCard(${c.id})">${esc(c.value)}<br><small>${esc(c.color)}</small></div>`).join('') + '</div>';
+  h.innerHTML = '<div class="fr-hand">' + cards.map(c => `<div class="ucard U${c.color}" onclick="playCard(${c.id})">${esc(c.value)}<br><small>${esc(c.color)}</small></div>`).join('') + '</div>';
 });
-function fetchHand() { s.emit('uno:hand'); }
-function playCard(id) { const c = document.getElementById('wildc').value; s.emit('uno:play', { cardId: id, color: c }, r => { if (!r.ok) alert(r.err); else fetchHand(); }); }
-function draw() { s.emit('uno:draw', () => fetchHand()); }
+function fetchHand() { s.emit('fr:hand'); }
+function playCard(id) { const c = document.getElementById('wildc').value; s.emit('fr:play', { cardId: id, color: c }, r => { if (!r.ok) alert(r.err); else fetchHand(); }); }
+function draw() { s.emit('fr:draw', () => fetchHand()); }
