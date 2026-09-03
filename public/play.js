@@ -16,7 +16,7 @@ let S = null, lastGame = null, lastKey = null, selSq = null;
 let myRole = null, myCard = null, myDrawn = [];
 s.on('connect', () => { if (qs.get('name') || (storedName && CODE)) doJoin(); });
 s.on('state', st => {
-  if (lastGame !== null && lastGame !== st.game) { myRole = null; myCard = null; lastKey = null; }
+  if (lastGame !== null && lastGame !== st.game) { myRole = null; myCard = null; lastKey = null; amChef = null; }
   lastGame = st.game; selSq = null;
   S = st; document.getElementById('g').textContent = 'Spiel: ' + gameName(st.game); render();
 });
@@ -29,7 +29,7 @@ function doJoin() {
     document.getElementById('who').textContent = 'Verbunden als ' + name + (r.relinked ? ' (Sitzung wiederhergestellt ✅)' : '');
   });
 }
-function gameName(g) { return { quiz: 'Quiz', chess: 'Schach', fr: 'Farbrausch', slf: 'Stadt-Land-Fluss', bingo: 'Bingo', vier: 'Vier in einer Reihe', wolf: 'Dorf & Wölfe' }[g] || g; }
+function gameName(g) { return { quiz: 'Quiz', chess: 'Schach', fr: 'Farbrausch', slf: 'Stadt-Land-Fluss', bingo: 'Bingo', vier: 'Vier in einer Reihe', wolf: 'Dorf & Wölfe', gw: 'Geheimworte', bluff: 'Bluff-Poker', mr: 'Malen & Raten', wg: 'Würfelglück', wv: 'Wortverbot' }[g] || g; }
 function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 // Ton + Vibration bei "Du bist dran" (offline, WebAudio)
 let audioOK = false;
@@ -80,6 +80,35 @@ function turnInfo() {
     if (W.phase === 'day' && meA.alive) return { key: 'wolf-d', mine: true, text: '🗳️ Stimme ab!' };
     if (W.winner) return { key: 'wolf-over', mine: false, text: '🏁 ' + (W.winner === 'Wölfe' ? '🐺 Wölfe siegen!' : '🧑‍🌾 Dorf siegt!') };
   }
+  if (S.game === 'gw' && S.gw) {
+    const G = S.gw;
+    if (G.winner) return { key: 'gw-over', mine: false, text: '🏆 ' + (G.winner === 'R' ? 'Rot' : 'Blau') + ' gewinnt!' };
+    if (G.phase === 'hint') return { key: 'gw-h', mine: !!amChef, text: amChef ? '🔔 DU gibst den Hinweis!' : 'Chef denkt nach…' };
+    return { key: 'gw-g', mine: false, text: (G.turn === 'R' ? '🔴 Rot' : '🔵 Blau') + ' rät: ' + (G.hint ? '„' + G.hint.word + '“ ' + G.hint.n : '') };
+  }
+  if (S.game === 'bluff' && S.bluff) {
+    const B = S.bluff;
+    if (B.phase === 'done') return { key: 'bluff-over', mine: false, text: '🏆 ' + B.winners.join(', ') };
+    const mine = B.turnId === me;
+    return { key: 'bluff-' + B.turnId + '-' + B.pot, mine, text: mine ? '🔔 DU bist am Zug! Check/Call/Fold' : (B.turn || '–') + ' ist am Zug · Pot ' + B.pot };
+  }
+  if (S.game === 'mr' && S.mr) {
+    const M = S.mr;
+    if (M.phase === 'done') return { key: 'mr-over', mine: false, text: '🏁 Runde vorbei.' };
+    const mine = M.drawerId === me;
+    return { key: 'mr-' + M.round, mine, text: mine ? '🎨 DU malst! (' + M.wordLen + ' Buchstaben)' : M.drawer + ' malt – rate mit!' };
+  }
+  if (S.game === 'wg' && S.wg) {
+    const W = S.wg;
+    if (W.done) return { key: 'wg-over', mine: false, text: '🏆 ' + W.winners.join(', ') };
+    const mine = W.turnId === me;
+    return { key: 'wg-' + W.turnId + '-' + W.rollsLeft, mine, text: mine ? '🔔 DU würfelst!' : (W.turn || '–') + ' würfelt' };
+  }
+  if (S.game === 'wv' && S.wv) {
+    const V = S.wv;
+    const mine = V.explainerId === me;
+    return { key: 'wv-' + V.explainer + '-' + V.scores.A + V.scores.B, mine, text: mine ? '🔔 DU erklärst für Team ' + V.explTeam + '!' : V.explainer + ' erklärt für Team ' + V.explTeam };
+  }
   return null;
 }
 function banner() {
@@ -98,6 +127,11 @@ function controls() {
     bingo: B('bingo:start', '▶ Neues Spiel', 1) + `<button class="btn" onclick="s.emit('bingo:draw',r=>{if(r&&!r.ok)alert(r.err||'Fehler')})">🎱 Zahl ziehen</button>`,
     vier: B('vier:reset', '🔄 Neues Spiel'),
     wolf: B('wolf:start', '▶ Spiel starten', 1) + B('wolf:endnight', '🌙→☀️ Nacht beenden') + B('wolf:endday', '🗳️ Abstimmung beenden'),
+    gw: B('gw:start', '▶ Neue Runde', 1),
+    bluff: B('bluff:start', '🃏 Neue Hand', 1),
+    mr: B('mr:start', '▶ Neue Runde', 1) + B('mr:end', '⏹ Runde beenden'),
+    wg: B('wg:start', '▶ Neues Spiel', 1),
+    wv: B('wv:start', '▶ Neues Spiel', 1) + B('wv:endturn', '⏭ Durchgang beenden'),
   };
   return `<details class="card"><summary>🎬 Spielsteuerung (geht auch ohne TV – antippen)</summary>${map[S.game] || ''}</details>`;
 }
@@ -122,6 +156,11 @@ function render() {
   else if (S.game === 'bingo') renderBingoC(el, head);
   else if (S.game === 'vier') renderVierC(el, head);
   else if (S.game === 'wolf') renderWolfC(el, head);
+  else if (S.game === 'gw') renderGwC(el, head);
+  else if (S.game === 'bluff') renderBluffC(el, head);
+  else if (S.game === 'mr') renderMrC(el, head);
+  else if (S.game === 'wg') renderWgC(el, head);
+  else if (S.game === 'wv') renderWvC(el, head);
 }
 function copyLink() {
   const url = location.origin + '/play?room=' + CODE;
@@ -251,6 +290,169 @@ function renderWolfC(el, head) {
   h += '<div class="card"><h2>Chronik</h2>' + W.log.map(l => `<div>${esc(l)}</div>`).join('') + '</div></div>' + controls();
   el.innerHTML = h;
   if (!myRole) s.emit('wolf:role');
+}
+// --- Geheimworte (Controller) ---
+let amChef = null, myKey = null;
+s.on('gkey', k => {
+  myKey = k; amChef = !!k;
+  const h = document.getElementById('gkey'); if (h && k) paintKey(h, k);
+  render();
+});
+function paintKey(el, key) {
+  el.innerHTML = '<div class="gwgrid small">' + S.gw.words.map((w, i) => {
+    const r = S.gw.revealed[i];
+    const c = r ? (key[i] === 'R' ? 'gr' : key[i] === 'B' ? 'gb' : key[i] === 'N' ? 'gn' : 'ga') : (key[i] === 'R' ? 'kr' : key[i] === 'B' ? 'kb' : key[i] === 'N' ? 'kn' : 'ka');
+    return `<div class="gwcell ${c}">${esc(w)}${r ? ' ✓' : ''}</div>`;
+  }).join('') + '</div>';
+}
+function renderGwC(el, head) {
+  const G = S.gw;
+  if (!G) { el.innerHTML = head + '<div class="card">Warte auf Start… oder starte selbst unten.</div>' + controls(); return; }
+  let h = head + `<div class="card"><h2>🕵️ Geheimworte</h2>
+    <div class="muted">Am Zug: <b>${G.turn === 'R' ? '🔴 Rot' : '🔵 Blau'}</b> · Rot offen: ${G.leftR} · Blau offen: ${G.leftB}</div>
+    <div class="row"><button class="btn alt" onclick="s.emit('gw:seat',{team:'R'})">🔴 Chef Rot ${esc(G.chefR || '')}</button><button class="btn alt" onclick="s.emit('gw:seat',{team:'B'})">🔵 Chef Blau ${esc(G.chefB || '')}</button></div>`;
+  if (G.hint) h += `<div class="center" style="font-size:24px">„<b>${esc(G.hint.word)}</b>“ – ${G.hint.n}</div>`;
+  h += '<div id="gkey"></div>';
+  if (!amChef && G.phase === 'guess') {
+    h += '<div class="gwgrid">' + G.words.map((w, i) => G.revealed[i] ? '' : `<button class="gwcell" onclick="s.emit('gw:guess',{idx:${i}},r=>{if(!r.ok)alert(r.err||'Fehler')})">${esc(w)}</button>`).join('') + '</div>';
+    h += `<button class="btn alt" onclick="s.emit('gw:pass')">⏭ Passen (Zug abgeben)</button>`;
+  } else if (amChef && G.phase === 'hint') {
+    h += `<div class="row"><input id="gw_w" maxlength="24" placeholder="Hinweiswort"><select id="gw_n"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+      <button class="btn" onclick="s.emit('gw:hint',{word:document.getElementById('gw_w').value,n:document.getElementById('gw_n').value},r=>{if(!r.ok)alert(r.err)})">Hinweis senden</button>`;
+  } else if (G.phase === 'done') {
+    h += `<div class="tv-big">🏆 ${G.winner === 'R' ? '🔴 Rot' : '🔵 Blau'} gewinnt!</div>`;
+  } else {
+    h += '<p class="muted">Warte… (Chef denkt nach oder Team rät – siehe TV)</p>';
+  }
+  h += '</div>' + controls();
+  el.innerHTML = h;
+  s.emit('gw:key');
+}
+// --- Bluff-Poker (Controller) ---
+s.on('bhand', cards => {
+  const h = document.getElementById('bh'); if (!h) return;
+  h.innerHTML = cards && cards.length ? cards.map(pcardHtml).join('') : '<span class="muted">Keine Karten – warte auf nächste Hand.</span>';
+});
+function pcardHtml(c) {
+  const red = c.s === 'h' || c.s === 'd';
+  const r = c.r === 'T' ? '10' : c.r;
+  const sym = { h: '♥', d: '♦', c: '♣', s: '♠' }[c.s];
+  return `<div class="pcard big ${red ? 'red' : 'blk'}">${r}<br>${sym}</div>`;
+}
+function renderBluffC(el, head) {
+  const B = S.bluff;
+  if (!B) { el.innerHTML = head + '<div class="card">Warte auf Start… oder gib selbst unten.</div>' + controls(); return; }
+  const me = B.players.find(p => p.id === s.id) || {};
+  const toCall = 10 - (me.paid || 0);
+  let h = head + `<div class="card"><h2>🃏 Bluff-Poker</h2>
+    <div class="muted">Pot: <b>${B.pot}</b> · Deine Chips: <b>${me.chips || 0}</b> · Phase: ${B.phase}${me.folded ? ' · <b>Du hast gefoldet</b>' : ''}</div>
+    <div class="center" style="display:flex;gap:8px;justify-content:center" id="bh"></div>
+    <div class="center muted">Offen: ${B.community.map(c => (c.r === 'T' ? '10' : c.r) + c.s).join(' ') || '–'}</div>`;
+  if (B.phase !== 'done' && !me.folded) {
+    h += `<div class="row"><button class="btn alt" onclick="s.emit('bluff:action',{act:'check'},r=>{if(!r.ok)alert(r.err)})">Check</button>
+      <button class="btn" onclick="s.emit('bluff:action',{act:'call'},r=>{if(!r.ok)alert(r.err)})">Call ${toCall > 0 ? toCall : 0}</button>
+      <button class="btn warn" onclick="s.emit('bluff:action',{act:'fold'})">Fold</button></div>`;
+  }
+  if (B.phase === 'done') h += `<div class="tv-big">🏆 ${B.winners.map(esc).join(', ')}${B.winDesc ? ' (' + esc(B.winDesc) + ')' : ''}</div>`;
+  h += '</div>' + controls();
+  el.innerHTML = h;
+  s.emit('bluff:hand');
+}
+// --- Malen & Raten (Controller) ---
+let drawing = false, curPts = [], curColor = '#111111';
+s.on('mword', w => {
+  const h = document.getElementById('mword'); if (!h) return;
+  h.innerHTML = w ? '🎨 Dein Wort: <b>' + esc(w) + '</b> (' + w.length + ' Buchstaben)' : 'Warte auf Rundenstart…';
+});
+function drawPicL(cv, strokes) {
+  if (!cv) return;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#f8fafc'; ctx.fillRect(0, 0, 500, 500);
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  for (const st of strokes || []) {
+    ctx.strokeStyle = st.c || '#111'; ctx.lineWidth = 8;
+    ctx.beginPath();
+    st.pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+    ctx.stroke();
+  }
+}
+function mSetup(cv, canDraw) {
+  drawPicL(cv, S.mr.strokes);
+  if (!canDraw) return;
+  const pos = (e) => { const r = cv.getBoundingClientRect(); return [Math.round((e.clientX - r.left) / r.width * 500), Math.round((e.clientY - r.top) / r.height * 500)]; };
+  cv.onpointerdown = (e) => { e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (x) {} drawing = true; curPts = [pos(e)]; };
+  cv.onpointermove = (e) => {
+    if (!drawing) return; e.preventDefault();
+    const p = pos(e), l = curPts[curPts.length - 1];
+    if (Math.hypot(p[0] - l[0], p[1] - l[1]) > 3) {
+      curPts.push(p);
+      const ctx = cv.getContext('2d');
+      ctx.strokeStyle = curColor; ctx.lineWidth = 8; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(l[0], l[1]); ctx.lineTo(p[0], p[1]); ctx.stroke();
+    }
+  };
+  const up = () => { if (!drawing) return; drawing = false; if (curPts.length > 1) s.emit('mr:stroke', { stroke: { c: curColor, pts: curPts } }); curPts = []; };
+  cv.onpointerup = up; cv.onpointercancel = up;
+}
+function renderMrC(el, head) {
+  const M = S.mr;
+  if (!M || M.phase === 'lobby') { el.innerHTML = head + '<div class="card">Warte auf Start… oder starte selbst unten.</div>' + controls(); return; }
+  const mine = M.drawerId === s.id;
+  let h = head + `<div class="card"><h2>🎨 Malen & Raten (Runde ${M.round})</h2><div id="mword"></div>`;
+  h += '<canvas id="mycv" width="500" height="500" style="width:100%;background:#f8fafc;border-radius:12px;touch-action:none"></canvas>';
+  if (M.phase === 'done') {
+    h += `<div class="tv-big">${esc(M.logExtra || 'Runde vorbei!')}</div>`;
+  } else if (mine) {
+    h += `<div class="row">${['#111111', '#dc2626', '#2563eb', '#16a34a', '#d97706'].map(c => `<button class="btn alt" style="border:3px solid ${c}" onclick="curColor='${c}'">●</button>`).join('')}</div>
+      <button class="btn alt" onclick="s.emit('mr:clear')">🧹 Alles weg</button>`;
+  } else {
+    h += `<div class="row"><input id="mr_g" maxlength="30" autocomplete="off" placeholder="Dein Tipp…"><button class="btn" onclick="s.emit('mr:guess',{text:document.getElementById('mr_g').value},r=>{if(r&&r.right)alert('Richtig! +100 🎉');document.getElementById('mr_g').value=''})">Raten</button></div>
+      <p class="muted">Erraten von: ${M.guessed.join(', ') || '–'}</p>`;
+  }
+  h += '</div>' + controls();
+  el.innerHTML = h;
+  mSetup(document.getElementById('mycv'), mine && M.phase === 'draw');
+  s.emit('mr:word');
+}
+// --- Würfelglück (Controller) ---
+const WG_CAT_LAB = { ones: '1er', twos: '2er', threes: '3er', fours: '4er', fives: '5er', sixes: '6er', three: '3 Gleiche', four: '4 Gleiche', full: 'Full House', small: 'Kl. Straße', large: 'Gr. Straße', kniffel: 'Kniffel', chance: 'Chance' };
+function renderWgC(el, head) {
+  const W = S.wg;
+  if (!W) { el.innerHTML = head + '<div class="card">Warte auf Start… oder starte selbst unten.</div>' + controls(); return; }
+  const mine = W.turnId === s.id;
+  const mySheet = W.sheets[s.id] || {};
+  let h = head + `<div class="card"><h2>🎲 Würfelglück</h2>
+    <div class="center" style="font-size:44px">` + W.dice.map((d, i) => `<span onclick="s.emit('wg:hold',{idx:${i}})" style="${W.held[i] ? 'opacity:.35' : ''};cursor:pointer">${'⚀⚁⚂⚃⚄⚅'[d - 1]}</span>`).join(' ') + `</div>
+    <div class="muted center">Würfe übrig: ${W.rollsLeft} · Antippen = halten · Total: ${W.totals[s.id] ? W.totals[s.id].total : 0}</div>`;
+  if (mine && !W.done) h += `<button class="btn" onclick="s.emit('wg:roll',r=>{if(!r.ok)alert(r.err)})">🎲 Würfeln (${W.rollsLeft})</button>`;
+  if (mine && !W.done && W.rollsLeft < 3) {
+    h += '<div class="cards">' + Object.entries(WG_CAT_LAB).map(([c, lab]) => `<button class="btn alt" ${mySheet[c] !== null && mySheet[c] !== undefined ? 'disabled style="opacity:.4"' : ''} onclick="s.emit('wg:score',{cat:'${c}'},r=>{if(!r.ok)alert(r.err)})">${lab}${mySheet[c] !== null && mySheet[c] !== undefined ? ': ' + mySheet[c] : ''}</button>`).join('') + '</div>';
+  }
+  if (W.done) h += `<div class="tv-big">🏆 ${W.winners.map(esc).join(', ')}</div>`;
+  h += '</div>' + controls();
+  el.innerHTML = h;
+}
+// --- Wortverbot (Controller) ---
+s.on('vcard', c => {
+  const h = document.getElementById('vcard'); if (!h) return;
+  h.innerHTML = c ? `<div class="topcard UY">${esc(c[0])}</div><div class="card">🚫 Verboten:<br>${c.slice(1).map(x => '• ' + esc(x)).join('<br>')}</div>` : '<p class="muted">Du rätst – Karte bleibt geheim! 🤫</p>';
+});
+function renderWvC(el, head) {
+  const V = S.wv;
+  if (!V) { el.innerHTML = head + '<div class="card">Warte auf Start… oder starte selbst unten.</div>' + controls(); return; }
+  const mine = V.explainerId === s.id;
+  let h = head + `<div class="card"><h2>🤐 Wortverbot – Team ${V.explTeam}</h2>
+    <div class="center" style="font-size:26px">🅰 ${V.scores.A} : ${V.scores.B} 🅱</div>
+    <div class="muted">Erklärt: <b>${esc(V.explainer)}</b> · ${V.left} Karten übrig</div><div id="vcard"></div>`;
+  if (mine) {
+    h += `<div class="row"><button class="btn" onclick="s.emit('wv:next',{mode:'right'})">✅ Richtig +1</button><button class="btn alt" onclick="s.emit('wv:next',{mode:'skip'})">⏭ Skip</button></div>`;
+  } else {
+    h += `<button class="btn warn" onclick="s.emit('wv:next',{mode:'foul'},r=>{if(r.ok)alert('Verstoß notiert!')})">🤐 VERSTOSS! (+1 Gegner)</button>`;
+  }
+  if (V.lastResult) h += `<p class="muted">${esc(V.lastResult)}</p>`;
+  h += '</div>' + controls();
+  el.innerHTML = h;
+  s.emit('wv:card');
 }
 // --- Farbrausch ---
 s.on('hand', cards => {

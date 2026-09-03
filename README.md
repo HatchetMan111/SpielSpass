@@ -1,9 +1,11 @@
 # PartyPlay 🎮 – lokale TV + Handy Partyspiele
 
 TV als Host, Handys als Controller – **komplett im privaten Netzwerk, keine Cloud**.
-Spiele: **Quiz**, **Schach** (2 Spieler, TV zeigt Brett), **Farbrausch** (eigenes Farb-Kartenspiel, 2–6 Spieler),
-**Stadt-Land-Fluss** (2–8, Timer + TV-Kontrolle), **Bingo** (2–12, TV zieht), **Vier in einer Reihe** (2 Spieler),
-**Dorf & Wölfe** (4–12, Rollen geheim aufs Handy).
+Spiele (12, alle offline, alle auch ohne TV spielbar): **Quiz**, **Schach** (Brett antippen),
+**Farbrausch** (Farb-Kartenspiel, 2–6), **Stadt-Land-Fluss** (2–8, Timer + TV-Kontrolle), **Bingo** (2–12),
+**Vier in einer Reihe** (2), **Dorf & Wölfe** (4–12, geheime Rollen), **Geheimworte** (4+, 2 Teams + Chefs mit Geheim-Schlüssel),
+**Bluff-Poker** (2–8, Hold'em light mit Chips), **Malen & Raten** (3+, Canvas auf Handy, 90 s),
+**Würfelglück** (1–6, Kniffel-Blatt mit Bonus), **Wortverbot** (4+, 2 Teams, 151 Karten, 60 s).
 
 Tech: **Node 20 + Express + Socket.IO**, Port **8080**, In-Memory Räume (kein DB nötig).
 Proxmox-Stil: Installation wie **Proxmox VE Community Scripts** mit Einzeiler.
@@ -45,7 +47,8 @@ Erwartete Ausgabe am Ende:
 3. **Ohne TV geht alles auch:** Jedes Handy hat unten eine „🎬 Spielsteuerung“ (Start/Stopp/Ziehen/Weiter) – ideal, wenn ihr in **verschiedenen Zimmern** sitzt. Einladungs-Link per „🔗 Einladungs-Link kopieren“ teilen.
 4. Quiz: TV/Handy zeigt Frage, Handy antwortet (15 s). Schach: **Brett antippen** (Figur → grüne Punkte → Ziel), Brett dreht sich je nach Farbe mit. Farbrausch: Handkarten tippen, „Karte ziehen“ wenn nichts passt.
 5. SLF: Buchstabe am TV/Handy, Wörter am Handy, Stopp + Auswerten von überall, ungültige Wörter antippbar. Bingo: Karte automatisch aufs Handy, „BINGO rufen“ wird geprüft. Vier: Farbe wählen, Spalte tippen. Wölfe: Rolle geheim aufs Handy, nachts handeln, tags abstimmen – Moderation von TV oder Handy.
-6. **Komfort:** „🔔 DU bist am Zug“ + Ton/Vibration, Online-Punkte (●/○), Sitz/Hand/Punkte überleben WLAN-Abbrüche (autom. Reconnect, 10 Min. Karenz). Offline-Spieler bei Farbrausch per „⏭ Zug überspringen“ übergehbar.
+6. Geheimworte: Chef-Ansicht (Farb-Schlüssel) vs. Rate-Ansicht (Wörter antippen) auf dem Handy. Bluff: Hole Cards geheim, Check/Call/Fold-Buttons, Pot + Community Cards auf TV. Malen: Finger-Canvas auf Handy (5 Farben), Raten per Text, Punkte für Rater + Maler. Würfel: Würfel antippen = halten, Kategorien-Blatt, Bonus ab 63. Wortverbot: Karte nur für Erklärer + Gegner-Team sichtbar, Richtig/Skip/Verstoß-Buttons, Teamwechsel nach 60 s.
+7. **Komfort:** „🔔 DU bist am Zug“ + Ton/Vibration, Online-Punkte (●/○), Sitz/Hand/Punkte überleben WLAN-Abbrüche (autom. Reconnect, 10 Min. Karenz). Offline-Spieler bei Farbrausch per „⏭ Zug überspringen“ übergehbar.
 
 ## Neu in v0.4.0
 
@@ -82,7 +85,7 @@ partyplay.service    # systemd-Unit
 install/partyplay.sh # Proxmox LXC Install-Script
 ```
 
-Hinweise: Schach v1 ohne Rochade/En-passant, mit Schach/Matt-Erkennung + Bauern-Umwandlung (→ Dame). Farbrausch v1 ohne Stapeln. Alles offline – keine CDN/Fonts.
+Hinweise: Schach v1 ohne Rochade/En-passant (Bauern-Umwandlung → Dame). Farbrausch v1 ohne Stapeln. Bluff v1 Fixed-Limit ohne Erhöhen/Seite-Pots. Alles offline – keine CDN/Fonts, keine Markennamen.
 
 ## Roadmap (geplant)
 
@@ -91,9 +94,14 @@ Hinweise: Schach v1 ohne Rochade/En-passant, mit Schach/Matt-Erkennung + Bauern-
 | Stadt-Land-Fluss (Timer + TV-Kontrolle) | 2–8 | klein | ✅ v0.3.0 |
 | Bingo (TV zieht, Handy-Karten auto) | 2–12 | klein | ✅ v0.3.0 |
 | Vier in einer Reihe | 2 | klein | ✅ v0.3.0 |
-| Buzzer-Quiz (Reaktion) | 2–8 | klein | geplant |
 | Dorf & Wölfe (Rollen geheim, TV moderiert) | 4–12 | mittel | ✅ v0.3.0 |
+| Geheimworte (327 Wörter, Chef-Schlüssel) | 4+ | mittel | ✅ v0.5.0 |
+| Bluff-Poker (Hold'em light, Chips) | 2–8 | mittel | ✅ v0.5.0 |
+| Malen & Raten (Canvas, 241 Begriffe) | 3+ | groß | ✅ v0.5.0 |
+| Würfelglück (Kniffel-Blatt + Bonus) | 1–6 | mittel | ✅ v0.5.0 |
+| Wortverbot (151 Karten, 60 s) | 4+ | mittel | ✅ v0.5.0 |
+| Buzzer-Quiz (Reaktion) | 2–8 | klein | geplant |
 | Schiffe versenken | 2 | mittel | Idee |
-| Montagsmaler (zeichnen + raten) | 3–8 | groß | Idee |
+| Montagsmaler-Extra / Stille Post | 3–8 | groß | Idee |
 
 Hinweis zu Namen: bewusst keine Markennamen (kein UNO®, kein Tabu®, kein Connect 4) – eigene Bezeichnungen, eigene Fragen/Karten.

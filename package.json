@@ -1,7 +1,7 @@
 {
   "name": "partyplay",
-  "version": "0.4.0",
-  "description": "Lokale TV+Handy Partyspiele (Quiz, Schach, Farbrausch, Stadt-Land-Fluss, Bingo, Vier in einer Reihe, Dorf & Wölfe) – Proxmox LXC ready",
+  "version": "0.5.0",
+  "description": "Lokale TV+Handy Partyspiele (Quiz, Schach, Farbrausch, SLF, Bingo, Vier, Woelfe, Geheimworte, Bluff-Poker, Malen, Wuerfelglueck, Wortverbot) – Proxmox LXC ready",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

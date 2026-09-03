@@ -24,6 +24,24 @@ details.card summary{cursor:pointer;font-weight:800;font-size:18px;padding:4px}
 /* Vier: Spalten-Buttons als Grid */
 .vdrop{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .vdrop .btn{padding:10px 0;font-size:16px}
+/* Geheimworte-Raster */
+.gwgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px auto;max-width:640px}
+.gwgrid.small{grid-template-columns:repeat(5,1fr)}
+.gwcell{background:#334155;border-radius:8px;padding:12px 4px;text-align:center;font-weight:800;font-size:clamp(12px,2.6vw,18px);border:0;color:#e2e8f0;min-height:52px;cursor:pointer;word-break:break-word}
+button.gwcell{width:100%}
+.gwcell.gr{background:#16a34a;color:#fff}.gwcell.gb{background:#2563eb;color:#fff}
+.gwcell.gn{background:#57534e;color:#e7e5e4}.gwcell.ga{background:#111827;color:#f87171;border:2px solid #f87171}
+.gwcell.kr{outline:3px solid #16a34a}.gwcell.kb{outline:3px solid #2563eb}
+.gwcell.kn{outline:3px solid #78716c}.gwcell.ka{outline:3px solid #111827;background:#3f3f46}
+/* Pokerkarten */
+.pcard{display:inline-block;min-width:56px;padding:10px 12px;border-radius:10px;background:#f8fafc;font-weight:900;font-size:22px;line-height:1.1;text-align:center;border:2px solid #94a3b8}
+.pcard.big{min-width:64px;font-size:30px}
+.pcard.red{color:#dc2626}.pcard.blk{color:#111827}
+/* Würfel-Blatt */
+table.sheet{border-collapse:collapse;width:100%;font-size:15px}
+table.sheet th,table.sheet td{border:1px solid #475569;padding:6px 8px;text-align:center}
+table.sheet td:first-child,table.sheet th:first-child{text-align:left;color:#94a3b8}
+#mycv,#tvpic{touch-action:none;cursor:crosshair}
 input,select{width:100%;padding:14px;font-size:17px;border-radius:10px;border:1px solid #475569;background:#0f172a;color:#fff;margin:6px 0}
 .code{font-size:56px;letter-spacing:8px;font-weight:900;text-align:center;color:#fde68a}
 .muted{color:#94a3b8}.row{display:flex;gap:8px}.row>*{flex:1}

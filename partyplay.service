@@ -1,5 +1,5 @@
 [Unit]
-Description=PartyPlay – lokale TV+Handy Partyspiele (Quiz, Schach, Farbrausch, SLF, Bingo, Vier, Wölfe)
+Description=PartyPlay – lokale TV+Handy Partyspiele (12 Spiele: Quiz bis Wortverbot)
 After=network-online.target
 Wants=network-online.target
 

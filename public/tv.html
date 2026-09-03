@@ -8,6 +8,9 @@
 <div class="card center row">
 <button class="btn alt" onclick="sel('slf')">SLF</button><button class="btn alt" onclick="sel('bingo')">Bingo</button><button class="btn alt" onclick="sel('vier')">Vier</button><button class="btn alt" onclick="sel('wolf')">Wölfe</button>
 </div>
+<div class="card center row">
+<button class="btn alt" onclick="sel('gw')">Geheimworte</button><button class="btn alt" onclick="sel('bluff')">Poker</button><button class="btn alt" onclick="sel('mr')">Malen</button><button class="btn alt" onclick="sel('wg')">Würfel</button><button class="btn alt" onclick="sel('wv')">Wortverbot</button>
+</div>
 <div id="quizCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('quiz:start')">Quiz starten</button>
 <button class="btn alt" onclick="q('quiz:next')">Weiter →</button></div>
 <div id="chessCtl" class="card center" style="display:none"><button class="btn alt" onclick="q('chess:reset')">Neues Spiel</button></div>
@@ -22,6 +25,13 @@
 <div id="wolfCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('wolf:start')">Spiel starten (Rollen verteilen)</button>
 <button class="btn alt" onclick="s.emit('wolf:endnight')">Nacht beenden → Tag</button>
 <button class="btn alt" onclick="s.emit('wolf:endday')">Abstimmung beenden → Nacht</button></div>
+<div id="gwCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('gw:start')">Neue Runde</button></div>
+<div id="bluffCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('bluff:start')">Neue Hand geben</button></div>
+<div id="mrCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('mr:start')">Neue Runde (nächster malt)</button>
+<button class="btn alt" onclick="s.emit('mr:end')">Runde beenden</button></div>
+<div id="wgCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('wg:start')">Neues Spiel</button></div>
+<div id="wvCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('wv:start')">Neues Spiel (Teams mischen)</button>
+<button class="btn alt" onclick="s.emit('wv:endturn')">Durchgang beenden → Teamwechsel</button></div>
 <div id="stage"></div>
 <div class="card"><h2>Punkte / Spieler</h2><div id="players"></div></div>
 <p class="center"><a href="/">← Lobby</a></p></div>
