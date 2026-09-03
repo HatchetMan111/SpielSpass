@@ -1,0 +1,15 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PartyPlay TV</title><link rel="stylesheet" href="/style.css"></head><body><div class="wrap">
+<div class="center"><div class="muted">HANDY VERBINDEN MIT</div><div class="code" id="code">----</div>
+<div class="muted" id="url"></div></div>
+<div class="card center row">
+<button class="btn alt" onclick="sel('quiz')">Quiz</button><button class="btn alt" onclick="sel('chess')">Schach</button><button class="btn alt" onclick="sel('uno')">UNO</button>
+</div>
+<div id="quizCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('quiz:start')">Quiz starten</button>
+<button class="btn alt" onclick="q('quiz:next')">Weiter →</button></div>
+<div id="chessCtl" class="card center" style="display:none"><button class="btn alt" onclick="q('chess:reset')">Neues Spiel</button></div>
+<div id="unoCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('uno:start')">UNO geben</button></div>
+<div id="stage"></div>
+<div class="card"><h2>Punkte / Spieler</h2><div id="players"></div></div>
+<p class="center"><a href="/">← Lobby</a></p></div>
+<script src="/socket.io/socket.io.js"></script><script src="/tv.js"></script></body></html>
