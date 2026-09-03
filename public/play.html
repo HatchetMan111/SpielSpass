@@ -1,7 +1,9 @@
 <!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>PartyPlay Controller</title><link rel="stylesheet" href="/style.css"></head><body><div class="wrap">
 <h1>📱 Controller <span class="muted" id="code"></span></h1>
-<div class="card" id="joinBox"><input id="name" placeholder="Dein Name"><button class="btn" onclick="doJoin()">Beitreten</button></div>
+<div class="card" id="joinBox"><input id="name" placeholder="Dein Name" maxlength="24"><button class="btn" onclick="doJoin()">Beitreten</button>
+<p class="muted">Bleibst du im selben WLAN, stellt die App deine Sitzung nach Abbrüchen automatisch wieder her.</p></div>
+<div class="muted center" id="who"></div>
 <div id="game"></div>
 <p class="center muted"><a href="/">Lobby</a> · <span id="g"></span></p></div>
 <script src="/socket.io/socket.io.js"></script><script src="/play.js"></script></body></html>

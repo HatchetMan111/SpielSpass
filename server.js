@@ -46,16 +46,16 @@ function newCode() {
 function roomState(room) {
   return {
     code: room.code, game: room.game,
-    players: [...room.players.values()].map(p => ({ id: p.id, name: p.name })),
+    players: [...room.players.values()].map(p => ({ id: p.id, name: p.name, online: p.online !== false })),
     quiz: room.quiz ? { qIndex: room.quiz.qIndex, total: QUIZ.length, scores: room.quiz.scores, phase: room.quiz.phase, current: room.quiz.phase === 'question' ? { q: QUIZ[room.quiz.qIndex].q, choices: QUIZ[room.quiz.qIndex].choices } : null, lastResult: room.quiz.lastResult || null } : null,
-    chess: room.chess ? { board: room.chess.board, turn: room.chess.turn, history: room.chess.history, white: nameOf(room, room.chess.whiteId), black: nameOf(room, room.chess.blackId) } : null,
-    fr: room.fr ? { top: room.fr.discard[room.fr.discard.length - 1], color: room.fr.color, turn: nameOf(room, room.fr.order[room.fr.turnIdx]), counts: room.fr.order.map(id => ({ name: nameOf(room, id), n: (room.fr.hands[id] || []).length })), winner: room.fr.winner ? nameOf(room, room.fr.winner) : null } : null,
+    chess: room.chess ? { board: room.chess.board, turn: room.chess.turn, history: room.chess.history, white: nameOf(room, room.chess.whiteId), black: nameOf(room, room.chess.blackId), whiteId: room.chess.whiteId, blackId: room.chess.blackId, whiteOnline: (room.players.get(room.chess.whiteId) || {}).online !== false, blackOnline: (room.players.get(room.chess.blackId) || {}).online !== false, legal: legalMovesMap(room.chess.board, room.chess.turn), lastMove: lastMoveOf(room.chess.history) } : null,
+    fr: room.fr ? { top: room.fr.discard[room.fr.discard.length - 1], color: room.fr.color, turn: nameOf(room, room.fr.order[room.fr.turnIdx]), turnId: room.fr.order[room.fr.turnIdx], turnOnline: (room.players.get(room.fr.order[room.fr.turnIdx]) || {}).online !== false, counts: room.fr.order.map(id => ({ name: nameOf(room, id), n: (room.fr.hands[id] || []).length })), winner: room.fr.winner ? nameOf(room, room.fr.winner) : null } : null,
     slf: room.slf ? { cats: room.slf.cats, letter: room.slf.letter, round: room.slf.round, phase: room.slf.phase, scores: room.slf.scores,
       progress: Object.fromEntries(Object.entries(room.slf.answers).map(([id, a]) => [id, room.slf.cats.filter(c => (a[c] || '').trim()).length])),
       answers: (room.slf.phase === 'reveal' || room.slf.phase === 'done') ? room.slf.answers : null,
       valid: (room.slf.phase === 'reveal' || room.slf.phase === 'done') ? room.slf.valid : null } : null,
     bingo: room.bingo ? { drawn: room.bingo.drawn, current: room.bingo.drawn[room.bingo.drawn.length - 1] || null, total: 75, phase: room.bingo.phase, winner: room.bingo.winner ? nameOf(room, room.bingo.winner) : null, players: Object.keys(room.bingo.cards).map(id => nameOf(room, id)) } : null,
-    vier: room.vier ? { board: room.vier.board, turn: room.vier.turn, winner: room.vier.winner, r: nameOf(room, room.vier.rId), y: nameOf(room, room.vier.yId) } : null,
+    vier: room.vier ? { board: room.vier.board, turn: room.vier.turn, winner: room.vier.winner, r: nameOf(room, room.vier.rId), y: nameOf(room, room.vier.yId), rId: room.vier.rId, yId: room.vier.yId, rOnline: (room.players.get(room.vier.rId) || {}).online !== false, yOnline: (room.players.get(room.vier.yId) || {}).online !== false } : null,
     wolf: room.wolf ? { phase: room.wolf.phase, alive: Object.entries(room.wolf.alive).map(([id, a]) => ({ id, name: nameOf(room, id), alive: a })), log: room.wolf.log.slice(-6), winner: room.wolf.winner, dayVotes: room.wolf.phase === 'day' ? room.wolf.votes : null } : null,
   };
 }
@@ -140,6 +140,52 @@ function tryMove(chess, fromS, toS) {
   })();
   if (!hasMove) chess.history.push(inCheck(chess.board, foe) ? '# Schachmatt' : 'Remis (Patt)');
   return { ok: true };
+}
+
+function sqName(x, y) { return 'abcdefgh'[x] + (8 - y); }
+// Alle legalen Züge der Farbe als {von:[nach,...]} (für Handy-Brett mit Highlight)
+function legalMovesMap(board, color) {
+  const out = {};
+  for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
+    const p = board[y][x];
+    if (!p || p.c !== color) continue;
+    const tos = [];
+    for (const m of pseudoLegal(board, x, y)) {
+      const nb = board.map(r => r.slice());
+      nb[m.y][m.x] = nb[y][x]; nb[y][x] = null;
+      if (nb[m.y][m.x].t === 'p' && (m.y === 0 || m.y === 7)) nb[m.y][m.x] = { t: 'q', c: p.c };
+      if (!inCheck(nb, color)) tos.push(sqName(m.x, m.y));
+    }
+    if (tos.length) out[sqName(x, y)] = tos;
+  }
+  return out;
+}
+function lastMoveOf(history) {
+  const h = (history || []).filter(s => /^[a-h][1-8]-[a-h][1-8]$/.test(s));
+  if (!h.length) return null;
+  const [from, to] = h[h.length - 1].split('-');
+  return { from, to };
+}
+// Reconnect: alte Socket-ID auf neue umziehen (Sitze, Hände, Punkte, Rollen bleiben)
+function relinkRoom(room, oldId, newId, entry) {
+  room.players.delete(oldId);
+  room.players.set(newId, entry);
+  if (room.hostId === oldId) room.hostId = newId;
+  const swap = (o) => { if (o && o[oldId] !== undefined && o[newId] === undefined) { o[newId] = o[oldId]; delete o[oldId]; } };
+  const remapVals = (o) => { if (!o) return; for (const k of Object.keys(o)) if (o[k] === oldId) o[k] = newId; };
+  if (room.quiz) { swap(room.quiz.scores); swap(room.quiz.answers); }
+  if (room.chess) {
+    if (room.chess.whiteId === oldId) room.chess.whiteId = newId;
+    if (room.chess.blackId === oldId) room.chess.blackId = newId;
+  }
+  if (room.fr) { const i = room.fr.order.indexOf(oldId); if (i >= 0) room.fr.order[i] = newId; swap(room.fr.hands); }
+  if (room.slf) { swap(room.slf.answers); swap(room.slf.valid); swap(room.slf.scores); }
+  if (room.bingo) swap(room.bingo.cards);
+  if (room.vier) {
+    if (room.vier.rId === oldId) room.vier.rId = newId;
+    if (room.vier.yId === oldId) room.vier.yId = newId;
+  }
+  if (room.wolf) { swap(room.wolf.roles); swap(room.wolf.alive); swap(room.wolf.votes); swap(room.wolf.nightVotes); remapVals(room.wolf.votes); remapVals(room.wolf.nightVotes); }
 }
 
 // ---------- Farbrausch (vereinfacht) ----------
@@ -264,32 +310,40 @@ function wolfCheck(room) {
 io.on('connection', (socket) => {
   socket.emit('hello', { app: 'partyplay' });
 
-  socket.on('create-room', ({ name, game }, cb) => {
+  socket.on('create-room', ({ name, game, pid }, cb) => {
     try {
       const code = newCode();
       const room = { code, players: new Map(), game: game || 'quiz', quiz: null, chess: null, fr: null, hostId: socket.id };
       rooms.set(code, room);
       socket.join(code);
       socket.data.code = code;
-      room.players.set(socket.id, { id: socket.id, name: (name || 'TV').slice(0, 24) });
+      room.players.set(socket.id, { id: socket.id, name: (name || 'TV').slice(0, 24), pid: String(pid || '').slice(0, 32) || null, online: true });
       ensureGame(room);
       broadcast(code);
       cb && cb({ ok: true, code });
     } catch (e) { cb && cb({ ok: false, err: String(e && e.message || e) }); }
   });
 
-  socket.on('join-room', ({ code, name }, cb) => {
+  socket.on('join-room', ({ code, name, pid }, cb) => {
     try {
       code = String(code || '').toUpperCase().trim();
       const room = rooms.get(code);
       if (!room) return cb && cb({ ok: false, err: 'Raum nicht gefunden' });
       socket.join(code);
       socket.data.code = code;
-      room.players.set(socket.id, { id: socket.id, name: String(name || 'Spieler').slice(0, 24) || 'Spieler' });
+      pid = String(pid || '').slice(0, 32) || null;
+      let oldId = null;
+      if (pid) for (const [id, p] of room.players) if (p.pid && p.pid === pid && id !== socket.id) { oldId = id; break; }
+      if (oldId) {
+        const kept = room.players.get(oldId);
+        relinkRoom(room, oldId, socket.id, { id: socket.id, name: kept.name, pid, online: true, lastSeen: Date.now() });
+      } else {
+        room.players.set(socket.id, { id: socket.id, name: String(name || 'Spieler').slice(0, 24) || 'Spieler', pid, online: true, lastSeen: Date.now() });
+      }
       ensureGame(room);
       if (room.quiz && room.quiz.scores[socket.id] === undefined) room.quiz.scores[socket.id] = 0;
       broadcast(code);
-      cb && cb({ ok: true, code, state: roomState(room) });
+      cb && cb({ ok: true, code, state: roomState(room), relinked: !!oldId });
     } catch (e) { cb && cb({ ok: false, err: String(e && e.message || e) }); }
   });
 
@@ -311,7 +365,7 @@ io.on('connection', (socket) => {
     if (socket.id === room.hostId) return; // TV antwortet nicht
     if (room.quiz.answers[socket.id] !== undefined) return;
     room.quiz.answers[socket.id] = choice;
-    const needed = Math.max(1, room.players.size - 1); // alle außer TV-Host
+    const needed = Math.max(1, [...room.players.values()].filter(p => p.online !== false && p.id !== room.hostId).length); // nur Online-Spieler (ohne TV-Host)
     if (Object.keys(room.quiz.answers).length >= needed) quizReveal(room);
     else broadcast(room.code);
   });
@@ -557,17 +611,22 @@ io.on('connection', (socket) => {
     broadcast(room.code);
   });
 
+  socket.on('fr:skip', () => {
+    const room = rooms.get(socket.data.code); if (!room || !room.fr || room.fr.winner || !room.fr.order.length) return;
+    room.fr.turnIdx = (room.fr.turnIdx + 1) % room.fr.order.length;
+    broadcast(room.code);
+  });
+
   socket.on('disconnect', () => {
     const code = socket.data.code;
     if (!code) return;
     const room = rooms.get(code); if (!room) return;
     const leftName = nameOf(room, socket.id) || 'Spieler';
-    room.players.delete(socket.id);
-    if (!room.players.size) { if (room.quiz?.timer) clearTimeout(room.quiz.timer); if (room.slf?.timer) clearTimeout(room.slf.timer); rooms.delete(code); return; }
-    if (room.fr) { room.fr.order = room.fr.order.filter(id => id !== socket.id); delete room.fr.hands[socket.id]; if (!room.fr.order.length) room.fr = null; else room.fr.turnIdx %= room.fr.order.length; }
-    if (room.slf) { delete room.slf.answers[socket.id]; delete room.slf.valid[socket.id]; }
-    if (room.bingo) delete room.bingo.cards[socket.id];
-    if (room.wolf && room.wolf.alive[socket.id] !== undefined) { room.wolf.alive[socket.id] = false; room.wolf.log.push('🚪 ' + leftName + ' hat verlassen (zählt als ausgeschieden).'); }
+    const entry = room.players.get(socket.id);
+    if (entry) { entry.online = false; entry.lastSeen = Date.now(); }
+    const anyOnline = [...room.players.values()].some(p => p.online !== false);
+    if (!anyOnline) { if (room.quiz?.timer) clearTimeout(room.quiz.timer); if (room.slf?.timer) clearTimeout(room.slf.timer); rooms.delete(code); return; }
+    if (room.wolf && room.wolf.alive[socket.id]) room.wolf.log.push('🚪 ' + leftName + ' kurz weg – Reconnect stellt alles wieder her.');
     broadcast(code);
   });
 });
@@ -600,6 +659,31 @@ function quizReveal(room) {
   room.quiz.phase = 'reveal';
   broadcast(room.code);
 }
+
+// Karteileichen: offline >10 Min → aus Spiel entfernen (Sitz/Hand/Punkte aufräumen)
+setInterval(() => {
+  for (const [code, room] of rooms) {
+    let changed = false;
+    for (const [id, p] of [...room.players]) {
+      if (p.online === false && Date.now() - (p.lastSeen || 0) > 10 * 60 * 1000) {
+        room.players.delete(id); changed = true;
+        if (room.fr) { room.fr.order = room.fr.order.filter(x => x !== id); delete room.fr.hands[id]; }
+        if (room.slf) { delete room.slf.answers[id]; delete room.slf.valid[id]; }
+        if (room.bingo) delete room.bingo.cards[id];
+        if (room.chess) { if (room.chess.whiteId === id) room.chess.whiteId = null; if (room.chess.blackId === id) room.chess.blackId = null; }
+        if (room.vier) { if (room.vier.rId === id) room.vier.rId = null; if (room.vier.yId === id) room.vier.yId = null; }
+        if (room.wolf && room.wolf.alive[id] !== undefined) { room.wolf.alive[id] = false; room.wolf.log.push('🚪 ' + p.name + ' endgültig raus (zählt als ausgeschieden).'); }
+      }
+    }
+    if (room.fr && room.fr.order.length) room.fr.turnIdx %= room.fr.order.length;
+    if (![...room.players.values()].some(p => p.online !== false)) {
+      if (room.quiz?.timer) clearTimeout(room.quiz.timer);
+      if (room.slf?.timer) clearTimeout(room.slf.timer);
+      rooms.delete(code); continue;
+    }
+    if (changed) broadcast(code);
+  }
+}, 60000);
 
 server.listen(PORT, HOST, () => console.log(`partyplay läuft auf http://${HOST}:${PORT}`));
 module.exports = { server };

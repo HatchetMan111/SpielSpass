@@ -2,11 +2,13 @@
 const qs = new URLSearchParams(location.search);
 const CODE = (qs.get('room') || '').toUpperCase();
 const s = io();
+let TVPID = null;
+try { TVPID = localStorage.getItem('pp_pid'); if (!TVPID) { TVPID = 'tv-' + Math.random().toString(36).slice(2); localStorage.setItem('pp_pid', TVPID); } } catch (e) { TVPID = null; }
 document.getElementById('code').textContent = CODE;
 document.getElementById('url').textContent = location.origin + '/play?room=' + CODE;
 const stage = document.getElementById('stage'), playersEl = document.getElementById('players');
 let S = null;
-s.emit('join-room', { code: CODE, name: 'TV' }, r => { if (!r.ok) stage.innerHTML = '<div class="card">Fehler: ' + r.err + '</div>'; });
+s.emit('join-room', { code: CODE, name: 'TV', pid: TVPID }, r => { if (!r.ok) stage.innerHTML = '<div class="card">Fehler: ' + r.err + '</div>'; });
 s.on('state', st => { S = st; render(); });
 function sel(g) { s.emit('select-game', { game: g }); }
 function q(ev) { s.emit(ev); }
@@ -23,7 +25,7 @@ function render() {
   playersEl.innerHTML = S.players.map(p => {
     let sc = ''; if (S.quiz) sc = ' – ' + (S.quiz.scores[p.id] || 0) + ' P';
     if (S.slf) sc = ' – ' + (S.slf.scores[p.id] || 0) + ' P';
-    return '<div>• ' + esc(p.name) + sc + '</div>';
+    return '<div><span class="' + (p.online === false ? 'off' : 'on') + '">●</span> ' + esc(p.name) + sc + '</div>';
   }).join('') || '<span class="muted">Noch niemand verbunden – Code am Handy eingeben.</span>';
   if (S.game === 'quiz') renderQuiz(); else if (S.game === 'chess') renderChess(); else if (S.game === 'fr') renderFr();
   else if (S.game === 'slf') renderSlf(); else if (S.game === 'bingo') renderBingo(); else if (S.game === 'vier') renderVier(); else renderWolf();
@@ -47,10 +49,13 @@ function renderQuiz() {
     <div class="tv-big">${esc(c.q)}</div>` + c.choices.map((t, i) => `<div class="card center" style="font-size:24px"><b>${i + 1}.</b> ${esc(t)}</div>`).join('');
 }
 function renderChess() {
-  const b = S.chess.board; let h = '<div class="board">';
+  const b = S.chess.board, last = S.chess.lastMove || {};
+  const sq = (x, y) => 'abcdefgh'[x] + (8 - y);
+  let h = '<div class="board">';
   for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
     const p = b[y][x]; const cls = (x + y) % 2 ? 'b' : 'w';
-    h += `<div class="sq ${cls}" style="color:${p ? (p.c === 'w' ? '#0f172a' : '#111827') : ''}">${p ? PIECES[p.t] : ''}</div>`;
+    const isLast = last.from === sq(x, y) || last.to === sq(x, y);
+    h += `<div class="sq ${cls}${isLast ? ' last' : ''}" style="color:${p ? (p.c === 'w' ? '#0f172a' : '#111827') : ''}">${p ? PIECES[p.t] : ''}</div>`;
   }
   h += '</div>';
   h += `<div class="center muted">Am Zug: <b>${S.chess.turn === 'w' ? 'Weiß' : 'Schwarz'}</b> · Weiß: ${esc(S.chess.white || '–')} · Schwarz: ${esc(S.chess.black || '–')}<br>Zug am Handy eingeben (z.B. E2 → E4). Verlauf: ${esc((S.chess.history || []).join(' '))}</div>`;
@@ -120,7 +125,10 @@ function renderWolf() {
   if (!S.wolf || S.wolf.phase === 'lobby') { stage.innerHTML = '<div class="tv-big">Dorf & Wölfe bereit – Rollen verteilen (min. 4 Spieler + TV)</div>'; return; }
   const W = S.wolf;
   let h = `<div class="tv-big">${W.phase === 'night' ? '🌙 NACHT – alle schlafen ein…' : W.phase === 'day' ? '☀️ TAG – diskutiert & stimmt ab!' : '🏁 Spiel vorbei'}</div>`;
-  h += '<div class="card"><h2>Dorfbewohner</h2>' + W.alive.map(a => `<div>${a.alive ? '🧑' : '💀'} ${esc(a.name)}${a.alive ? '' : ' (ausgeschieden)'}</div>`).join('') + '</div>';
+  h += '<div class="card"><h2>Dorfbewohner</h2>' + W.alive.map(a => {
+    const p = S.players.find(x => x.id === a.id), on = !p || p.online !== false;
+    return `<div>${a.alive ? (on ? '🧑' : '📴') : '💀'} ${esc(a.name)}${a.alive ? (on ? '' : ' (offline)') : ' (ausgeschieden)'}</div>`;
+  }).join('') + '</div>';
   if (W.phase === 'day' && W.dayVotes) {
     const tally = {};
     for (const t of Object.values(W.dayVotes)) tally[t] = (tally[t] || 0) + 1;

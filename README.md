@@ -42,8 +42,17 @@ Erwartete Ausgabe am Ende:
 
 1. TV-Browser (Fire TV / Smart-TV / Laptop per HDMI) öffnen: `http://<LXC-IP>:8080/` → Spiel wählen → Raum-Code (z. B. `KQ7M`) erscheint
 2. Handys im selben WLAN: `http://<LXC-IP>:8080/play?room=KQ7M` → Namen eingeben → losspielen
-3. Quiz: TV zeigt Frage, Handy antwortet (15 s). Schach: Farbe wählen, Zug als `e2` → `e4`. Farbrausch: Handkarten tippen, „Karte ziehen“ wenn nichts passt.
-4. SLF: Buchstabe am TV, Wörter am Handy, TV stoppt + wertet aus. Bingo: Karte kommt automatisch aufs Handy, „BINGO rufen“ bei voller Reihe. Vier: Farbe wählen, Spalte tippen. Wölfe: Rolle geheim aufs Handy, nachts handeln, tags abstimmen – TV moderiert.
+3. **Ohne TV geht alles auch:** Jedes Handy hat unten eine „🎬 Spielsteuerung“ (Start/Stopp/Ziehen/Weiter) – ideal, wenn ihr in **verschiedenen Zimmern** sitzt. Einladungs-Link per „🔗 Einladungs-Link kopieren“ teilen.
+4. Quiz: TV/Handy zeigt Frage, Handy antwortet (15 s). Schach: **Brett antippen** (Figur → grüne Punkte → Ziel), Brett dreht sich je nach Farbe mit. Farbrausch: Handkarten tippen, „Karte ziehen“ wenn nichts passt.
+5. SLF: Buchstabe am TV/Handy, Wörter am Handy, Stopp + Auswerten von überall, ungültige Wörter antippbar. Bingo: Karte automatisch aufs Handy, „BINGO rufen“ wird geprüft. Vier: Farbe wählen, Spalte tippen. Wölfe: Rolle geheim aufs Handy, nachts handeln, tags abstimmen – Moderation von TV oder Handy.
+6. **Komfort:** „🔔 DU bist am Zug“ + Ton/Vibration, Online-Punkte (●/○), Sitz/Hand/Punkte überleben WLAN-Abbrüche (autom. Reconnect, 10 Min. Karenz). Offline-Spieler bei Farbrausch per „⏭ Zug überspringen“ übergehbar.
+
+## Neu in v0.4.0
+
+- Schachbrett zum Antippen auf dem Handy (legale Züge grün, letzter Zug markiert, Brett-Flip)
+- Alle Spiele komplett ohne TV spielbar (Steuerung auf jedem Handy)
+- Reconnect per Geräte-ID + Online-Status + Ton/Vibration bei eigenem Zug
+- Lobby als Spiele-Karten mit Spieleranzahl
 
 ## Update / Deinstall
 

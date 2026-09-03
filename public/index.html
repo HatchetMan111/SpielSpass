@@ -3,9 +3,15 @@
 <h1>🎮 PartyPlay <span class="muted">lokal · TV + Handy</span></h1>
 <div class="card"><h2>1 · TV-Raum erstellen</h2>
 <input id="tvname" placeholder="Name für TV (z.B. Wohnzimmer-TV)" value="TV">
-<div class="row"><button class="btn" onclick="create('quiz')">Quiz starten</button><button class="btn" onclick="create('chess')">Schach starten</button><button class="btn" onclick="create('fr')">Farbrausch starten</button></div>
-<div class="row"><button class="btn" onclick="create('slf')">Stadt-Land-Fluss</button><button class="btn" onclick="create('bingo')">Bingo</button><button class="btn" onclick="create('vier')">Vier in Reihe</button></div>
-<div class="row"><button class="btn" onclick="create('wolf')">Dorf & Wölfe</button></div>
+<div class="cards">
+<div class="gcard"><h2>❓ Quiz</h2><p class="muted">2–12 Spieler · 10 Fragen · Punkte für Tempo</p><button class="btn" onclick="create('quiz')">Starten</button></div>
+<div class="gcard"><h2>♟ Schach</h2><p class="muted">2 Spieler · Brett antippen am Handy</p><button class="btn" onclick="create('chess')">Starten</button></div>
+<div class="gcard"><h2>🃏 Farbrausch</h2><p class="muted">2–6 Spieler · Farb-Kartenspiel</p><button class="btn" onclick="create('fr')">Starten</button></div>
+<div class="gcard"><h2>✏️ Stadt-Land-Fluss</h2><p class="muted">2–8 Spieler · Timer + Kontrolle</p><button class="btn" onclick="create('slf')">Starten</button></div>
+<div class="gcard"><h2>🎱 Bingo</h2><p class="muted">2–12 Spieler · Karten aufs Handy</p><button class="btn" onclick="create('bingo')">Starten</button></div>
+<div class="gcard"><h2>🔴 Vier in einer Reihe</h2><p class="muted">2 Spieler · Spalten antippen</p><button class="btn" onclick="create('vier')">Starten</button></div>
+<div class="gcard"><h2>🐺 Dorf & Wölfe</h2><p class="muted">4–12 Spieler · geheime Rollen</p><button class="btn" onclick="create('wolf')">Starten</button></div>
+</div>
 <p class="muted">TV öffnet danach die TV-Ansicht mit Raum-Code. Handys verbinden sich mit demselben Code.</p></div>
 <div class="card"><h2>2 · Mit Handy beitreten</h2>
 <input id="pname" placeholder="Dein Name">
@@ -15,8 +21,9 @@
 </div><script src="/socket.io/socket.io.js"></script><script>
 document.getElementById('here').textContent = location.origin;
 const io_ = io();
+function pid_(){ try{ let p=localStorage.getItem('pp_pid'); if(!p){p='tv-'+Math.random().toString(36).slice(2);localStorage.setItem('pp_pid',p);} return p; }catch(e){ return null; } }
 function create(game){ const name=document.getElementById('tvname').value||'TV';
- io_.emit('create-room',{name,game},r=>{ if(r.ok) location.href='/tv?room='+r.code; else alert(r.err); }); }
+ io_.emit('create-room',{name,game,pid:pid_()},r=>{ if(r.ok) location.href='/tv?room='+r.code; else alert(r.err); }); }
 function join(){ const code=document.getElementById('pcode').value.trim().toUpperCase();
  const name=document.getElementById('pname').value||'Spieler';
  if(code.length!==4) return alert('4-stelligen Code eingeben');

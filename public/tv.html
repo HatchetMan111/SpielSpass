@@ -11,7 +11,8 @@
 <div id="quizCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('quiz:start')">Quiz starten</button>
 <button class="btn alt" onclick="q('quiz:next')">Weiter →</button></div>
 <div id="chessCtl" class="card center" style="display:none"><button class="btn alt" onclick="q('chess:reset')">Neues Spiel</button></div>
-<div id="frCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('fr:start')">Karten geben</button></div>
+<div id="frCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('fr:start')">Karten geben</button>
+<button class="btn alt" onclick="s.emit('fr:skip')">⏭ Zug überspringen (bei Offline)</button></div>
 <div id="slfCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('slf:start')">Runde starten (Zufallsbuchstabe)</button>
 <button class="btn alt" onclick="s.emit('slf:stop')">Stopp! (Einsammeln)</button>
 <button class="btn alt" onclick="s.emit('slf:score')">Auswerten →</button></div>
