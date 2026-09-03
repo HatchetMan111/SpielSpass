@@ -13,6 +13,12 @@ input,select{width:100%;padding:14px;font-size:17px;border-radius:10px;border:1p
 .ucard{min-width:64px;padding:14px 10px;border-radius:10px;font-weight:900;font-size:20px;text-align:center;border:2px solid #fff;cursor:pointer;color:#fff}
 .UR{background:#dc2626}.UG{background:#16a34a}.UB{background:#2563eb}.UY{background:#ca8a04}.UW{background:#111827}
 .topcard{font-size:28px;font-weight:900;padding:24px;border-radius:14px;text-align:center;margin:10px 0;border:3px solid #fff}
+.vboard{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;max-width:520px;margin:12px auto;background:#1e3a8a;padding:12px;border-radius:14px}
+.vcell{aspect-ratio:1;background:#0f172a;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:clamp(18px,5vw,34px)}
+.vcell.vr{color:#f87171}.vcell.vy{color:#facc15}
+.bgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;max-width:420px;margin:10px auto}
+.bcell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;background:#334155;border-radius:8px}
+.bcell.hit{background:#16a34a}.bcell.free{background:#7c3aed}
 .qchoice{margin:8px 0}
 h1{font-size:28px;margin:8px 0}h2{color:#fde68a}
 .tv-big{font-size:clamp(28px,5vw,64px);text-align:center;font-weight:900}

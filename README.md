@@ -1,7 +1,9 @@
 # PartyPlay 🎮 – lokale TV + Handy Partyspiele
 
 TV als Host, Handys als Controller – **komplett im privaten Netzwerk, keine Cloud**.
-Spiele zum Start: **Quiz**, **Schach** (2 Spieler, TV zeigt Brett), **Farbrausch** (eigenes Farb-Kartenspiel, 2–6 Spieler).
+Spiele: **Quiz**, **Schach** (2 Spieler, TV zeigt Brett), **Farbrausch** (eigenes Farb-Kartenspiel, 2–6 Spieler),
+**Stadt-Land-Fluss** (2–8, Timer + TV-Kontrolle), **Bingo** (2–12, TV zieht), **Vier in einer Reihe** (2 Spieler),
+**Dorf & Wölfe** (4–12, Rollen geheim aufs Handy).
 
 Tech: **Node 20 + Express + Socket.IO**, Port **8080**, In-Memory Räume (kein DB nötig).
 Proxmox-Stil: Installation wie **Proxmox VE Community Scripts** mit Einzeiler.
@@ -41,6 +43,7 @@ Erwartete Ausgabe am Ende:
 1. TV-Browser (Fire TV / Smart-TV / Laptop per HDMI) öffnen: `http://<LXC-IP>:8080/` → Spiel wählen → Raum-Code (z. B. `KQ7M`) erscheint
 2. Handys im selben WLAN: `http://<LXC-IP>:8080/play?room=KQ7M` → Namen eingeben → losspielen
 3. Quiz: TV zeigt Frage, Handy antwortet (15 s). Schach: Farbe wählen, Zug als `e2` → `e4`. Farbrausch: Handkarten tippen, „Karte ziehen“ wenn nichts passt.
+4. SLF: Buchstabe am TV, Wörter am Handy, TV stoppt + wertet aus. Bingo: Karte kommt automatisch aufs Handy, „BINGO rufen“ bei voller Reihe. Vier: Farbe wählen, Spalte tippen. Wölfe: Rolle geheim aufs Handy, nachts handeln, tags abstimmen – TV moderiert.
 
 ## Update / Deinstall
 
@@ -64,7 +67,7 @@ curl -fsS http://<LXC-IP>:8080/api/health       # → {"ok":true,...}
 ## Repo-Struktur
 
 ```
-server.js            # Express + Socket.IO, Räume, Quiz/Schach/Farbrausch-Logik
+server.js            # Express + Socket.IO, Räume, alle Spiele-Engines (Quiz/Schach/Farbrausch/SLF/Bingo/Vier/Wölfe)
 public/              # index.html (Lobby), tv.html+tv.js (Host), play.html+play.js (Controller), style.css
 partyplay.service    # systemd-Unit
 install/partyplay.sh # Proxmox LXC Install-Script
@@ -76,12 +79,12 @@ Hinweise: Schach v1 ohne Rochade/En-passant, mit Schach/Matt-Erkennung + Bauern-
 
 | Spiel | Spieler | Aufwand | Status |
 |---|---|---|---|
-| Stadt-Land-Fluss (Timer + Voting) | 2–8 | klein | geplant |
-| Bingo (TV zieht, Handy-Karten auto) | 2–12 | klein | geplant |
-| Vier in einer Reihe | 2 | klein | geplant |
+| Stadt-Land-Fluss (Timer + TV-Kontrolle) | 2–8 | klein | ✅ v0.3.0 |
+| Bingo (TV zieht, Handy-Karten auto) | 2–12 | klein | ✅ v0.3.0 |
+| Vier in einer Reihe | 2 | klein | ✅ v0.3.0 |
 | Buzzer-Quiz (Reaktion) | 2–8 | klein | geplant |
+| Dorf & Wölfe (Rollen geheim, TV moderiert) | 4–12 | mittel | ✅ v0.3.0 |
 | Schiffe versenken | 2 | mittel | Idee |
-| Dorf & Wölfe (Mafia/Werwolf-Moderator) | 5–12 | mittel | Idee |
 | Montagsmaler (zeichnen + raten) | 3–8 | groß | Idee |
 
 Hinweis zu Namen: bewusst keine Markennamen (kein UNO®, kein Tabu®, kein Connect 4) – eigene Bezeichnungen, eigene Fragen/Karten.

@@ -16,11 +16,17 @@ function render() {
   document.getElementById('quizCtl').style.display = S.game === 'quiz' ? '' : 'none';
   document.getElementById('chessCtl').style.display = S.game === 'chess' ? '' : 'none';
   document.getElementById('frCtl').style.display = S.game === 'fr' ? '' : 'none';
+  document.getElementById('slfCtl').style.display = S.game === 'slf' ? '' : 'none';
+  document.getElementById('bingoCtl').style.display = S.game === 'bingo' ? '' : 'none';
+  document.getElementById('vierCtl').style.display = S.game === 'vier' ? '' : 'none';
+  document.getElementById('wolfCtl').style.display = S.game === 'wolf' ? '' : 'none';
   playersEl.innerHTML = S.players.map(p => {
     let sc = ''; if (S.quiz) sc = ' – ' + (S.quiz.scores[p.id] || 0) + ' P';
+    if (S.slf) sc = ' – ' + (S.slf.scores[p.id] || 0) + ' P';
     return '<div>• ' + esc(p.name) + sc + '</div>';
   }).join('') || '<span class="muted">Noch niemand verbunden – Code am Handy eingeben.</span>';
-  if (S.game === 'quiz') renderQuiz(); else if (S.game === 'chess') renderChess(); else renderFr();
+  if (S.game === 'quiz') renderQuiz(); else if (S.game === 'chess') renderChess(); else if (S.game === 'fr') renderFr();
+  else if (S.game === 'slf') renderSlf(); else if (S.game === 'bingo') renderBingo(); else if (S.game === 'vier') renderVier(); else renderWolf();
 }
 function renderQuiz() {
   if (!S.quiz || S.quiz.phase === 'lobby') { stage.innerHTML = '<div class="tv-big">Quiz bereit – „Quiz starten“ drücken</div>'; return; }
@@ -57,5 +63,73 @@ function renderFr() {
     <div class="topcard U${S.fr.color}">${esc(t.value)} (${esc(t.color)})</div>
     <div class="card">${S.fr.counts.map(c => `<div>• ${esc(c.name)}: ${c.n} Karten</div>`).join('')}</div>
     ${S.fr.winner ? `<div class="tv-big">🏆 ${esc(S.fr.winner)} gewinnt!</div>` : ''}`;
+}
+function renderSlf() {
+  if (!S.slf || S.slf.phase === 'lobby') { stage.innerHTML = '<div class="tv-big">Stadt-Land-Fluss bereit – „Runde starten“ drücken</div>'; return; }
+  const L = S.slf;
+  let h = `<div class="muted center">Runde ${L.round} · Buchstabe:</div><div class="tv-big">${esc(L.letter)}</div>`;
+  h += `<div class="card center">Kategorien: ${L.cats.map(esc).join(' · ')}</div>`;
+  if (L.phase === 'write') {
+    h += '<div class="card"><h2>Schreiben… (Handy)</h2>' + Object.entries(L.progress).map(([id, n]) => {
+      const p = S.players.find(x => x.id === id);
+      return `<div>${n >= L.cats.length ? '✅' : '✏️'} ${esc(p ? p.name : '?')} (${n}/${L.cats.length})</div>`;
+    }).join('') + '</div>';
+  } else {
+    h += '<div class="card"><h2>Kontrolle – Ungültiges antippen (TV-Fernbedienung/Maus)</h2>';
+    for (const cat of L.cats) {
+      h += `<h2>${esc(cat)}</h2>`;
+      for (const p of S.players) {
+        const w = (L.answers[p.id] || {})[cat] || '–';
+        const ok = (L.valid[p.id] || {})[cat] !== false;
+        h += `<div class="row"><div>${ok ? '✅' : '❌'} <b>${esc(p.name)}:</b> ${esc(w)}</div><button class="btn alt" onclick="s.emit('slf:toggle',{pid:'${p.id}',cat:'${esc(cat)}'})">Umschalten</button></div>`;
+      }
+    }
+    h += '</div>';
+    if (L.phase === 'done') {
+      const rank = S.players.map(p => ({ n: p.name, s: L.scores[p.id] || 0 })).sort((a, b) => b.s - a.s);
+      h += '<div class="card"><h2>Punktestand</h2>' + rank.map((r, i) => `<div>${i + 1}. ${esc(r.n)} – ${r.s} P</div>`).join('') + '</div>';
+    }
+  }
+  stage.innerHTML = h;
+}
+function renderBingo() {
+  if (!S.bingo) { stage.innerHTML = '<div class="tv-big">Bingo bereit – „Neues Spiel“ drücken</div>'; return; }
+  const B = S.bingo;
+  let h = `<div class="muted center">Gezogen: ${B.drawn.length}/75</div>`;
+  h += `<div class="tv-big">${B.current ? '🎱 ' + B.current : '–'}</div>`;
+  if (B.drawn.length) h += `<div class="card center">Letzte: ${B.drawn.slice(-8).join(', ')}</div>`;
+  h += `<div class="card"><h2>Mitspieler (${B.players.length})</h2>${B.players.map(esc).join(', ')}</div>`;
+  if (B.winner) h += `<div class="tv-big">🏆 BINGO! ${esc(B.winner)}</div>`;
+  stage.innerHTML = h;
+}
+function renderVier() {
+  if (!S.vier) { stage.innerHTML = '<div class="tv-big">Vier in einer Reihe – „Neues Spiel“</div>'; return; }
+  const V = S.vier;
+  let h = '<div class="vboard">';
+  for (let r = 0; r < 6; r++) for (let c = 0; c < 7; c++) {
+    const v = V.board[r][c];
+    h += `<div class="vcell ${v === 'R' ? 'vr' : v === 'Y' ? 'vy' : ''}">${v ? '●' : ''}</div>`;
+  }
+  h += '</div>';
+  h += `<div class="center muted">Am Zug: <b style="color:${V.turn === 'R' ? '#f87171' : '#facc15'}">${V.turn === 'R' ? '🔴 Rot' : '🟡 Gelb'}</b> · Rot: ${esc(V.r || '–')} · Gelb: ${esc(V.y || '–')}</div>`;
+  if (V.winner === 'draw') h += '<div class="tv-big">Unentschieden!</div>';
+  else if (V.winner) h += `<div class="tv-big">🏆 ${V.winner === 'R' ? 'Rot' : 'Gelb'} gewinnt!</div>`;
+  stage.innerHTML = h;
+}
+function renderWolf() {
+  if (!S.wolf || S.wolf.phase === 'lobby') { stage.innerHTML = '<div class="tv-big">Dorf & Wölfe bereit – Rollen verteilen (min. 4 Spieler + TV)</div>'; return; }
+  const W = S.wolf;
+  let h = `<div class="tv-big">${W.phase === 'night' ? '🌙 NACHT – alle schlafen ein…' : W.phase === 'day' ? '☀️ TAG – diskutiert & stimmt ab!' : '🏁 Spiel vorbei'}</div>`;
+  h += '<div class="card"><h2>Dorfbewohner</h2>' + W.alive.map(a => `<div>${a.alive ? '🧑' : '💀'} ${esc(a.name)}${a.alive ? '' : ' (ausgeschieden)'}</div>`).join('') + '</div>';
+  if (W.phase === 'day' && W.dayVotes) {
+    const tally = {};
+    for (const t of Object.values(W.dayVotes)) tally[t] = (tally[t] || 0) + 1;
+    h += '<div class="card"><h2>Stimmen</h2>' + Object.entries(tally).map(([id, n]) => {
+      const p = S.players.find(x => x.id === id); return `<div>${esc(p ? p.name : '?')}: ${n}</div>`;
+    }).join('') + '</div>';
+  }
+  h += '<div class="card"><h2>Chronik</h2>' + W.log.map(l => `<div>${esc(l)}</div>`).join('') + '</div>';
+  if (W.winner) h += `<div class="tv-big">${W.winner === 'Wölfe' ? '🐺 Die Wölfe gewinnen!' : '🧑‍🌾 Das Dorf gewinnt!'}</div>`;
+  stage.innerHTML = h;
 }
 function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }

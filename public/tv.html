@@ -5,10 +5,22 @@
 <div class="card center row">
 <button class="btn alt" onclick="sel('quiz')">Quiz</button><button class="btn alt" onclick="sel('chess')">Schach</button><button class="btn alt" onclick="sel('fr')">Farbrausch</button>
 </div>
+<div class="card center row">
+<button class="btn alt" onclick="sel('slf')">SLF</button><button class="btn alt" onclick="sel('bingo')">Bingo</button><button class="btn alt" onclick="sel('vier')">Vier</button><button class="btn alt" onclick="sel('wolf')">Wölfe</button>
+</div>
 <div id="quizCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('quiz:start')">Quiz starten</button>
 <button class="btn alt" onclick="q('quiz:next')">Weiter →</button></div>
 <div id="chessCtl" class="card center" style="display:none"><button class="btn alt" onclick="q('chess:reset')">Neues Spiel</button></div>
 <div id="frCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('fr:start')">Karten geben</button></div>
+<div id="slfCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('slf:start')">Runde starten (Zufallsbuchstabe)</button>
+<button class="btn alt" onclick="s.emit('slf:stop')">Stopp! (Einsammeln)</button>
+<button class="btn alt" onclick="s.emit('slf:score')">Auswerten →</button></div>
+<div id="bingoCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('bingo:start')">Neues Spiel</button>
+<button class="btn" onclick="s.emit('bingo:draw',r=>{if(r&&!r.ok)alert(r.err||'Fehler')})">Zahl ziehen 🎱</button></div>
+<div id="vierCtl" class="card center" style="display:none"><button class="btn alt" onclick="q('vier:reset')">Neues Spiel</button></div>
+<div id="wolfCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('wolf:start')">Spiel starten (Rollen verteilen)</button>
+<button class="btn alt" onclick="s.emit('wolf:endnight')">Nacht beenden → Tag</button>
+<button class="btn alt" onclick="s.emit('wolf:endday')">Abstimmung beenden → Nacht</button></div>
 <div id="stage"></div>
 <div class="card"><h2>Punkte / Spieler</h2><div id="players"></div></div>
 <p class="center"><a href="/">← Lobby</a></p></div>

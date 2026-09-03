@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # PartyPlay – Proxmox VE Community-Scripts Stil Installation
-# Erstellt einen LXC-Container und installiert PartyPlay (TV=Host, Handy=Player: Schach/Farbrausch/Quiz)
+# Erstellt einen LXC-Container und installiert PartyPlay (TV=Host, Handy=Player: Quiz, Schach, Farbrausch, SLF, Bingo, Vier, Wölfe)
 # Einzeiler: bash -c "$(wget -qLO - https://raw.githubusercontent.com/HatchetMan111/SpielSpass/main/install/partyplay.sh)"
 set -euo pipefail
 
