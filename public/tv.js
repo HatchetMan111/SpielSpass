@@ -123,7 +123,12 @@ function renderQuiz() {
     return;
   }
   const c = S.quiz.current;
-  stage.innerHTML = `<div class="muted center">Frage ${S.quiz.qIndex + 1} / ${S.quiz.total} – am Handy antworten!</div>
+  const ans = S.quiz.answered !== undefined ? `${S.quiz.answered} / ${S.quiz.needed} Antworten drin` : '';
+  const names = S.quiz.haveAnswered
+    ? S.players.filter(p => p.id !== S.hostId).map(p => (S.quiz.haveAnswered[p.id] ? '✅' : '⏳') + ' ' + esc(p.name)).join(' · ')
+    : '';
+  stage.innerHTML = `<div class="muted center">Frage ${S.quiz.qIndex + 1} / ${S.quiz.total} – am Handy antworten! <b>${esc(ans)}</b></div>
+    <div class="center muted" style="margin:4px 0">${names}</div>
     <div class="tv-big">${esc(c.q)}</div>` + c.choices.map((t, i) => `<div class="card center" style="font-size:24px"><b>${i + 1}.</b> ${esc(t)}</div>`).join('');
 }
 function renderChess() {

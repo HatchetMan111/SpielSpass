@@ -50,6 +50,12 @@ Erwartete Ausgabe am Ende:
 6. Geheimworte: Chef-Ansicht (Farb-Schlüssel) vs. Rate-Ansicht (Wörter antippen) auf dem Handy. Bluff: Hole Cards geheim, Check/Call/Fold-Buttons, Pot + Community Cards auf TV. Malen: Finger-Canvas auf Handy (5 Farben), Raten per Text, Punkte für Rater + Maler. Würfel: Würfel antippen = halten, Kategorien-Blatt, Bonus ab 63. Wortverbot: Karte nur für Erklärer + Gegner-Team sichtbar, Richtig/Skip/Verstoß-Buttons, Teamwechsel nach 60 s.
 7. **Komfort:** „🔔 DU bist am Zug“ + Ton/Vibration, Online-Punkte (●/○), Sitz/Hand/Punkte überleben WLAN-Abbrüche (autom. Reconnect, 10 Min. Karenz). Offline-Spieler bei Farbrausch per „⏭ Zug überspringen“ übergehbar.
 
+## Neu in v0.6.1 (Spiel-Systematik)
+
+- **Quiz-Progress auf TV:** „X / Y Antworten drin" + ✅/⏳ pro Spieler (auch auf Handys sichtbar)
+- **Hänge-Bug weg:** Ging ein Spieler offline, wartete das Quiz ewig – jetzt: Offline-Spieler zählen nicht mehr als „fehlen" (Reveal sofort), Rückkehrer zählen wieder, 15-s-Fallback-Timer bleibt
+- **Test-Rig:** E2E-Renderer spielt alle 12 Spiele mit echten Sockets und rendert jeden State durch TV+Handy (246 Pfade) – verhindert „weißer Bildschirm"-Regressionen (`node test/e2e-render.js`)
+
 ## Neu in v0.6.0 (Rumpus-Join)
 
 - TV erstellt Raum automatisch (kein Umweg mehr), zeigt permanent Code + URL + QR

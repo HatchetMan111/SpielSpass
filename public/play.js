@@ -213,7 +213,8 @@ function render() {
     if (S.quiz.phase === 'done') { el.innerHTML = head + '<div class="card"><h2>Fertig!</h2>Sieh aufs TV für das Ergebnis.</div>' + controls(); return; }
     if (S.quiz.phase === 'reveal') { el.innerHTML = head + '<div class="card">Auswertung läuft – warte auf nächste Frage…</div>' + controls(); return; }
     el.innerHTML = head + '<div class="card"><h2>' + esc(S.quiz.current.q) + '</h2>' +
-      S.quiz.current.choices.map((t, i) => `<button class="btn alt qchoice" onclick="answer(${i})">${i + 1}. ${esc(t)}</button>`).join('') + '</div>' + controls();
+      S.quiz.current.choices.map((t, i) => `<button class="btn alt qchoice" onclick="answer(${i})">${i + 1}. ${esc(t)}</button>`).join('') +
+      (S.quiz.haveAnswered && S.quiz.haveAnswered[s.id] ? '<p class="muted center">Antwort abgegeben ✓ – warte auf die anderen…</p>' : '') + '</div>' + controls();
   } else if (S.game === 'chess') {
     renderChessC(el, head);
   } else if (S.game === 'fr') {

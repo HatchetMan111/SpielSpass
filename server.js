@@ -47,7 +47,10 @@ function roomState(room) {
   return {
     code: room.code, game: room.game, hostId: room.hostId,
     players: [...room.players.values()].map(p => ({ id: p.id, name: p.name, avatar: p.avatar || '🙂', online: p.online !== false })),
-    quiz: room.quiz ? { qIndex: room.quiz.qIndex, total: QUIZ.length, scores: room.quiz.scores, phase: room.quiz.phase, current: room.quiz.phase === 'question' ? { q: QUIZ[room.quiz.qIndex].q, choices: QUIZ[room.quiz.qIndex].choices } : null, lastResult: room.quiz.lastResult || null } : null,
+    quiz: room.quiz ? { qIndex: room.quiz.qIndex, total: QUIZ.length, scores: room.quiz.scores, phase: room.quiz.phase, current: room.quiz.phase === 'question' ? { q: QUIZ[room.quiz.qIndex].q, choices: QUIZ[room.quiz.qIndex].choices } : null, lastResult: room.quiz.lastResult || null,
+      answered: Object.keys(room.quiz.answers).length,
+      needed: Math.max(1, [...room.players.values()].filter(p => p.online !== false && p.id !== room.hostId).length),
+      haveAnswered: Object.fromEntries(Object.keys(room.quiz.answers).map(id => [id, true])) } : null,
     chess: room.chess ? { board: room.chess.board, turn: room.chess.turn, history: room.chess.history, white: nameOf(room, room.chess.whiteId), black: nameOf(room, room.chess.blackId), whiteId: room.chess.whiteId, blackId: room.chess.blackId, whiteOnline: (room.players.get(room.chess.whiteId) || {}).online !== false, blackOnline: (room.players.get(room.chess.blackId) || {}).online !== false, legal: legalMovesMap(room.chess.board, room.chess.turn), lastMove: lastMoveOf(room.chess.history) } : null,
     fr: room.fr ? { top: room.fr.discard[room.fr.discard.length - 1], color: room.fr.color, turn: nameOf(room, room.fr.order[room.fr.turnIdx]), turnId: room.fr.order[room.fr.turnIdx], turnOnline: (room.players.get(room.fr.order[room.fr.turnIdx]) || {}).online !== false, counts: room.fr.order.map(id => ({ name: nameOf(room, id), n: (room.fr.hands[id] || []).length })), winner: room.fr.winner ? nameOf(room, room.fr.winner) : null } : null,
     slf: room.slf ? { cats: room.slf.cats, letter: room.slf.letter, round: room.slf.round, phase: room.slf.phase, scores: room.slf.scores,
@@ -613,9 +616,7 @@ io.on('connection', (socket) => {
     if (socket.id === room.hostId) return; // TV antwortet nicht
     if (room.quiz.answers[socket.id] !== undefined) return;
     room.quiz.answers[socket.id] = choice;
-    const needed = Math.max(1, [...room.players.values()].filter(p => p.online !== false && p.id !== room.hostId).length); // nur Online-Spieler (ohne TV-Host)
-    if (Object.keys(room.quiz.answers).length >= needed) quizReveal(room);
-    else broadcast(room.code);
+    quizMaybeReveal(room);
   });
   socket.on('quiz:next', () => {
     const room = rooms.get(socket.data.code); if (!room || !room.quiz) return;
@@ -1159,6 +1160,8 @@ io.on('connection', (socket) => {
       room.bluff.log.push('🚪 ' + leftName + ' getrennt – Hand automatisch gefoldet.');
       bluffAdvance(room.bluff, room);
     }
+    // Hänge-Schutz: wartende Spiele prüfen, ob alle Übrigen fertig sind (Quiz)
+    if (room.quiz && room.quiz.phase === 'question') quizMaybeReveal(room);
     broadcast(code);
   });
 });
@@ -1176,6 +1179,14 @@ function ensureGame(room, reset) {
   if (room.game === 'mr' && (!room.mr || reset)) { if (room.mr && room.mr.timer) clearTimeout(room.mr.timer); room.mr = null; }
   if (room.game === 'wg' && (!room.wg || reset)) room.wg = null;
   if (room.game === 'wv' && (!room.wv || reset)) { if (room.wv && room.wv.timer) clearTimeout(room.wv.timer); room.wv = null; }
+}
+// Reveal, sobald alle ONLINE-Spieler (ohne TV) geantwortet haben – Offline blockiert nie.
+function quizMaybeReveal(room) {
+  const neededIds = [...room.players.values()].filter(p => p.online !== false && p.id !== room.hostId).map(p => p.id);
+  const answered = Object.keys(room.quiz.answers);
+  const all = neededIds.every(id => answered.includes(id));
+  if (all || neededIds.length === 0) quizReveal(room);
+  else broadcast(room.code);
 }
 function quizAsk(room) {
   if (room.quiz.timer) clearTimeout(room.quiz.timer);
