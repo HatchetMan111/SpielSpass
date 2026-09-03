@@ -7,8 +7,8 @@ set -euo pipefail
 # ---------------- Variablen (oben, anpassbar) ----------------
 APP="partyplay"
 PORT="8080"
-CTID="${CTID:-200}"
-HOSTNAME="${HOSTNAME:-partyplay}"
+CTID="${CTID:-}"
+CT_HOSTNAME="${CT_HOSTNAME:-partyplay}"
 MEMORY="${MEMORY:-2048}"       # MB
 CORES="${CORES:-2}"
 DISKSIZE="${DISKSIZE:-8}"      # GB
@@ -52,7 +52,35 @@ check_pve() {
   command -v pct >/dev/null 2>&1 || die "pct nicht gefunden."
   pveversion
 }
-pct_exists() { pct status "$CTID" >/dev/null 2>&1; }
+# Prüft, ob die VMID von einem Gast (VM oder CT) belegt ist
+guest_exists() {
+  local id="$1"
+  pct status "$id" >/dev/null 2>&1 && return 0
+  qm status "$id" >/dev/null 2>&1 && return 0
+  return 1
+}
+# Findet die niedrigste freie VMID ab Startwert (Standard 200)
+next_free_vmid() {
+  local id="${1:-200}"
+  while guest_exists "$id"; do id=$((id + 1)); done
+  echo "$id"
+}
+# Sicherer Auto-CT: wenn CTID fehlt/belegt ist, nimm nächste freie ID
+ensure_ctid() {
+  if [[ -z "$CTID" ]]; then
+    CTID="$(next_free_vmid 200)"
+    msg "Kein CTID angegeben – nutze automatisch freie ID $CTID."
+  elif guest_exists "$CTID"; then
+    # existierender Container? -> idempotenter Update-Pfad
+    if pct status "$CTID" >/dev/null 2>&1; then
+      msg "CT $CTID existiert bereits – idempotenter Update-Pfad (App wird aktualisiert, CT bleibt)."
+    else
+      local old="$CTID"
+      CTID="$(next_free_vmid $((CTID + 1)))"
+      warn "VMID $old ist von einer VM belegt – erstelle stattdessen CT mit ID $CTID. (Alternativ CTID=<freie-ID> beim Einzeiler mitgeben.)"
+    fi
+  fi
+}
 
 ensure_template() {
   msg "Prüfe Template ${TEMPLATE_STORAGE}:vztmpl/${TEMPLATE} ..."
@@ -71,15 +99,15 @@ ensure_template() {
 }
 
 create_ct() {
-  if pct_exists; then
-    warn "CT $CTID existiert bereits – idempotenter Update-Pfad (App wird aktualisiert, CT bleibt)."
+  # CTID ist hier garantiert frei ODER unser eigener, bereits existierender CT (Update-Pfad)
+  if pct status "$CTID" >/dev/null 2>&1; then
     pct start "$CTID" 2>/dev/null || true
     return
   fi
   local net="name=eth0,bridge=${BRIDGE},ip=${NETCONF}"
-  msg "Erstelle LXC $CTID ($HOSTNAME, ${CORES}vCPU/${MEMORY}MB/${DISKSIZE}G, $net) ..."
+  msg "Erstelle LXC $CTID ($CT_HOSTNAME, ${CORES}vCPU/${MEMORY}MB/${DISKSIZE}G, $net) ..."
   pct create "$CTID" "${TEMPLATE_STORAGE}:vztmpl/${TEMPLATE}" \
-    --hostname "$HOSTNAME" --cores "$CORES" --memory "$MEMORY" --swap 512 \
+    --hostname "$CT_HOSTNAME" --cores "$CORES" --memory "$MEMORY" --swap 512 \
     --rootfs "${STORAGE}:${DISKSIZE}" --net0 "$net" \
     --onboot 1 --start 1 --unprivileged 1 --features nesting=1
   msg "Warte auf Netzwerk im CT ..."
@@ -128,7 +156,7 @@ verify() {
 }
 
 case "${1:-install}" in
-  install|update|"") check_root; check_pve; ensure_template; create_ct; setup_app; verify ;;
+  install|update|"") check_root; check_pve; ensure_template; ensure_ctid; create_ct; setup_app; verify ;;
   uninstall) check_root; pct stop "$CTID" 2>/dev/null || true; pct destroy "$CTID" ;;
   *) die "Usage: $0 [install|update|uninstall]" ;;
 esac
