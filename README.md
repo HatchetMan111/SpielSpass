@@ -9,15 +9,15 @@ Proxmox-Stil: Installation wie **Proxmox VE Community Scripts** mit Einzeiler.
 ## Einzeiler (auf dem Proxmox-Host als root)
 
 ```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/USER/REPO/main/install/partyplay.sh)"
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/HatchetMan111/SpielSpass/main/install/partyplay.sh)"
 ```
 
 Mit eigenen Werten:
 
 ```bash
-CTID=200 GH_USER=deinuser GH_REPO=partyplay bash -c "$(wget -qLO - https://raw.githubusercontent.com/deinuser/partyplay/main/install/partyplay.sh)"
+CTID=200 GH_USER=HatchetMan111 GH_REPO=SpielSpass bash -c "$(wget -qLO - https://raw.githubusercontent.com/HatchetMan111/SpielSpass/main/install/partyplay.sh)"
 # DEBUG mit vollem bash -x Log:
-DEBUG=1 bash -c "$(wget -qLO - https://raw.githubusercontent.com/deinuser/partyplay/main/install/partyplay.sh)"
+DEBUG=1 bash -c "$(wget -qLO - https://raw.githubusercontent.com/HatchetMan111/SpielSpass/main/install/partyplay.sh)"
 ```
 
 Was das Script tut (idempotent, `set -euo pipefail`):

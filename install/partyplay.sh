@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # PartyPlay – Proxmox VE Community-Scripts Stil Installation
 # Erstellt einen LXC-Container und installiert PartyPlay (TV=Host, Handy=Player: Schach/UNO/Quiz)
-# Einzeiler: bash -c "$(wget -qLO - https://raw.githubusercontent.com/USER/REPO/main/install/partyplay.sh)"
+# Einzeiler: bash -c "$(wget -qLO - https://raw.githubusercontent.com/HatchetMan111/SpielSpass/main/install/partyplay.sh)"
 set -euo pipefail
 
 # ---------------- Variablen (oben, anpassbar) ----------------
@@ -17,8 +17,8 @@ TEMPLATE_STORAGE="${TEMPLATE_STORAGE:-local}"
 TEMPLATE="${TEMPLATE:-debian-12-standard_12.7-1_amd64.tar.zst}"
 BRIDGE="${BRIDGE:-vmbr0}"
 NETCONF="${NETCONF:-dhcp}"     # dhcp oder z.B. "192.168.1.50/24,gw=192.168.1.1"
-GH_USER="${GH_USER:-USER}"
-GH_REPO="${GH_REPO:-REPO}"
+GH_USER="${GH_USER:-HatchetMan111}"
+GH_REPO="${GH_REPO:-SpielSpass}"
 GH_BRANCH="${GH_BRANCH:-main}"
 DEBUG="${DEBUG:-0}"
 
