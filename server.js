@@ -46,7 +46,7 @@ function newCode() {
 function roomState(room) {
   return {
     code: room.code, game: room.game, hostId: room.hostId,
-    players: [...room.players.values()].map(p => ({ id: p.id, name: p.name, online: p.online !== false })),
+    players: [...room.players.values()].map(p => ({ id: p.id, name: p.name, avatar: p.avatar || '🙂', online: p.online !== false })),
     quiz: room.quiz ? { qIndex: room.quiz.qIndex, total: QUIZ.length, scores: room.quiz.scores, phase: room.quiz.phase, current: room.quiz.phase === 'question' ? { q: QUIZ[room.quiz.qIndex].q, choices: QUIZ[room.quiz.qIndex].choices } : null, lastResult: room.quiz.lastResult || null } : null,
     chess: room.chess ? { board: room.chess.board, turn: room.chess.turn, history: room.chess.history, white: nameOf(room, room.chess.whiteId), black: nameOf(room, room.chess.blackId), whiteId: room.chess.whiteId, blackId: room.chess.blackId, whiteOnline: (room.players.get(room.chess.whiteId) || {}).online !== false, blackOnline: (room.players.get(room.chess.blackId) || {}).online !== false, legal: legalMovesMap(room.chess.board, room.chess.turn), lastMove: lastMoveOf(room.chess.history) } : null,
     fr: room.fr ? { top: room.fr.discard[room.fr.discard.length - 1], color: room.fr.color, turn: nameOf(room, room.fr.order[room.fr.turnIdx]), turnId: room.fr.order[room.fr.turnIdx], turnOnline: (room.players.get(room.fr.order[room.fr.turnIdx]) || {}).online !== false, counts: room.fr.order.map(id => ({ name: nameOf(room, id), n: (room.fr.hands[id] || []).length })), winner: room.fr.winner ? nameOf(room, room.fr.winner) : null } : null,
@@ -65,6 +65,48 @@ function roomState(room) {
   };
 }
 function nameOf(room, id) { const p = room.players.get(id); return p ? p.name : null; }
+function avatarOf(room, id) { const p = room.players.get(id); return (p && p.avatar) || '🙂'; }
+function pickAvatar(a) { a = String(a || '').trim().slice(0, 8); return a || '🙂'; }
+// Spieler endgültig entfernen (Sweep + Kick teilen sich das)
+function removePlayer(room, id) {
+  const nm = nameOf(room, id) || 'Spieler';
+  room.players.delete(id);
+  if (room.fr) { room.fr.order = room.fr.order.filter(x => x !== id); delete room.fr.hands[id]; if (room.fr.order.length) room.fr.turnIdx %= room.fr.order.length; }
+  if (room.slf) { delete room.slf.answers[id]; delete room.slf.valid[id]; }
+  if (room.bingo) delete room.bingo.cards[id];
+  if (room.chess) { if (room.chess.whiteId === id) room.chess.whiteId = null; if (room.chess.blackId === id) room.chess.blackId = null; }
+  if (room.vier) { if (room.vier.rId === id) room.vier.rId = null; if (room.vier.yId === id) room.vier.yId = null; }
+  if (room.wolf && room.wolf.alive[id] !== undefined) { room.wolf.alive[id] = false; room.wolf.log.push('🚪 ' + nm + ' endgültig raus (zählt als ausgeschieden).'); }
+  if (room.gw) { if (room.gw.chefR === id) room.gw.chefR = null; if (room.gw.chefB === id) room.gw.chefB = null; }
+  if (room.bluff) {
+    delete room.bluff.hole[id]; delete room.bluff.folded[id]; delete room.bluff.paid[id];
+    room.bluff.acted = room.bluff.acted.filter(x => x !== id);
+    room.bluff.order = room.bluff.order.filter(x => x !== id);
+    room.bluff.winners = (room.bluff.winners || []).filter(x => x !== id);
+    if (room.bluff.dealer === id) room.bluff.dealer = room.bluff.order[0] || null;
+    if (room.bluffChips) delete room.bluffChips[id];
+  }
+  if (room.mr) {
+    if (room.mrScores) delete room.mrScores[id];
+    room.mr.guessed = room.mr.guessed.filter(x => x !== id);
+    if (room.mr.drawerId === id && room.mr.phase === 'draw') {
+      if (room.mr.timer) clearTimeout(room.mr.timer);
+      room.mr.phase = 'done'; room.mr.logExtra = 'Malender weg – Runde abgebrochen.';
+    }
+  }
+  if (room.wg) {
+    delete room.wg.sheets[id];
+    const wasTurn = room.wg.order[room.wg.turnIdx] === id;
+    room.wg.order = room.wg.order.filter(x => x !== id);
+    if (!room.wg.order.length) { room.wg.done = true; }
+    else { room.wg.turnIdx %= room.wg.order.length; if (wasTurn) wgNext(room); }
+  }
+  if (room.wv) {
+    room.wv.teams.A = room.wv.teams.A.filter(x => x !== id);
+    room.wv.teams.B = room.wv.teams.B.filter(x => x !== id);
+    if (room.wv.explainerId === id) wvEndTurn(room, false);
+  }
+}
 function broadcast(code) { const r = rooms.get(code); if (r) io.to(code).emit('state', roomState(r)); }
 
 // ---------- Schach (vereinfacht, legal inkl. Schach-Erkennung, ohne Rochade/En-passant) ----------
@@ -504,25 +546,25 @@ for (let i = 0; i + 5 < WV_RAW.length; i += 6) WV_CARDS.push(WV_RAW.slice(i, i +
 io.on('connection', (socket) => {
   socket.emit('hello', { app: 'partyplay' });
 
-  socket.on('create-room', ({ name, game, pid } = {}, cb) => {
+  socket.on('create-room', ({ name, game, pid, avatar } = {}, cb) => {
     try {
       const code = newCode();
       const room = { code, players: new Map(), game: game || 'quiz', quiz: null, chess: null, fr: null, hostId: socket.id };
       rooms.set(code, room);
       socket.join(code);
       socket.data.code = code;
-      room.players.set(socket.id, { id: socket.id, name: (name || 'TV').slice(0, 24), pid: String(pid || '').slice(0, 32) || null, online: true });
+      room.players.set(socket.id, { id: socket.id, name: (name || 'TV').slice(0, 24), pid: String(pid || '').slice(0, 32) || null, avatar: pickAvatar(avatar), online: true });
       ensureGame(room);
       broadcast(code);
       cb && cb({ ok: true, code });
     } catch (e) { cb && cb({ ok: false, err: String(e && e.message || e) }); }
   });
 
-  socket.on('join-room', ({ code, name, pid } = {}, cb) => {
+  socket.on('join-room', ({ code, name, pid, avatar } = {}, cb) => {
     try {
       code = String(code || '').toUpperCase().trim();
       const room = rooms.get(code);
-      if (!room) return cb && cb({ ok: false, err: 'Raum nicht gefunden' });
+      if (!room) return cb && cb({ ok: false, err: 'Raum gibt es nicht – Code auf dem TV prüfen' });
       socket.join(code);
       socket.data.code = code;
       pid = String(pid || '').slice(0, 32) || null;
@@ -530,15 +572,27 @@ io.on('connection', (socket) => {
       if (pid) for (const [id, p] of room.players) if (p.pid && p.pid === pid && id !== socket.id) { oldId = id; break; }
       if (oldId) {
         const kept = room.players.get(oldId);
-        relinkRoom(room, oldId, socket.id, { id: socket.id, name: kept.name, pid, online: true, lastSeen: Date.now() });
+        relinkRoom(room, oldId, socket.id, { id: socket.id, name: kept.name, pid, avatar: kept.avatar || '🙂', online: true, lastSeen: Date.now() });
       } else {
-        room.players.set(socket.id, { id: socket.id, name: String(name || 'Spieler').slice(0, 24) || 'Spieler', pid, online: true, lastSeen: Date.now() });
+        room.players.set(socket.id, { id: socket.id, name: String(name || 'Spieler').slice(0, 24) || 'Spieler', pid, avatar: pickAvatar(avatar), online: true, lastSeen: Date.now() });
       }
       ensureGame(room);
       if (room.quiz && room.quiz.scores[socket.id] === undefined) room.quiz.scores[socket.id] = 0;
       broadcast(code);
       cb && cb({ ok: true, code, state: roomState(room), relinked: !!oldId });
     } catch (e) { cb && cb({ ok: false, err: String(e && e.message || e) }); }
+  });
+
+  // Host wirft einen Spieler raus (Rumpus: kick)
+  socket.on('host:kick', ({ playerId } = {}, cb) => {
+    const room = rooms.get(socket.data.code);
+    if (!room || socket.id !== room.hostId) return cb && cb({ ok: false, err: 'Nur der Host (TV)' });
+    if (!playerId || !room.players.has(playerId) || playerId === room.hostId) return cb && cb({ ok: false });
+    removePlayer(room, playerId);
+    const s = io.sockets.sockets.get(playerId);
+    if (s) { try { s.emit('kicked'); s.disconnect(true); } catch (e) {} }
+    broadcast(room.code);
+    cb && cb({ ok: true });
   });
 
   socket.on('select-game', ({ game } = {}) => {
@@ -740,15 +794,16 @@ io.on('connection', (socket) => {
   });
 
   // Dorf & Wölfe
-  socket.on('wolf:start', () => {
-    const room = rooms.get(socket.data.code); if (!room) return;
+  socket.on('wolf:start', (cb) => {
+    const room = rooms.get(socket.data.code); if (!room) return cb && cb({ ok: false, err: 'Kein Raum' });
+    const ids = [...room.players.keys()].filter(id => id !== room.hostId && (room.players.get(id) || {}).online !== false);
+    if (ids.length < 4) return cb && cb({ ok: false, err: 'Mind. 4 Mitspieler nötig (Dorf & Wölfe)' });
     room.game = 'wolf';
-    const ids = [...room.players.keys()].filter(id => id !== room.hostId);
-    if (ids.length < 4) { socket.emit('state', roomState(room)); return; }
     const roles = wolfMakeRoles(ids);
     const alive = {}; for (const id of ids) alive[id] = true;
     room.wolf = { phase: 'night', roles, alive, votes: {}, nightVotes: {}, log: ['🌙 Die Nacht bricht an. Wölfe und Seherin handeln auf dem Handy.'], winner: null };
     broadcast(room.code);
+    cb && cb({ ok: true });
   });
   socket.on('wolf:role', () => {
     const room = rooms.get(socket.data.code); if (!room || !room.wolf) return socket.emit('wrole', null);
@@ -815,6 +870,8 @@ io.on('connection', (socket) => {
   socket.on('gw:start', (cb) => {
     const room = rooms.get(socket.data.code); if (!room) return cb && cb({ ok: false });
     room.game = 'gw';
+    const n = [...room.players.keys()].filter(id => id !== room.hostId).length;
+    if (n < 3) return cb && cb({ ok: false, err: 'Mind. 3 Mitspieler nötig (2 Chefs + Rater)' });
     const g = gwNew();
     g.log.push('🕵️ Neue Runde – Rot beginnt (9 Wörter), Blau hat 8.');
     room.gw = g;
@@ -1047,7 +1104,7 @@ io.on('connection', (socket) => {
     const room = rooms.get(socket.data.code); if (!room) return cb && cb({ ok: false });
     room.game = 'wv';
     const ids = [...room.players.keys()].filter(id => id !== room.hostId && (room.players.get(id) || {}).online !== false);
-    if (ids.length < 2) return cb && cb({ ok: false, err: 'Mind. 2 Mitspieler nötig' });
+    if (ids.length < 4) return cb && cb({ ok: false, err: 'Mind. 4 Mitspieler nötig (2 gegen 2)' });
     const teams = { A: [], B: [] };
     ids.forEach((id, i) => teams[i % 2 ? 'B' : 'A'].push(id));
     if (room.wv && room.wv.timer) clearTimeout(room.wv.timer);
@@ -1146,13 +1203,7 @@ setInterval(() => {
     let changed = false;
     for (const [id, p] of [...room.players]) {
       if (p.online === false && Date.now() - (p.lastSeen || 0) > 10 * 60 * 1000) {
-        room.players.delete(id); changed = true;
-        if (room.fr) { room.fr.order = room.fr.order.filter(x => x !== id); delete room.fr.hands[id]; }
-        if (room.slf) { delete room.slf.answers[id]; delete room.slf.valid[id]; }
-        if (room.bingo) delete room.bingo.cards[id];
-        if (room.chess) { if (room.chess.whiteId === id) room.chess.whiteId = null; if (room.chess.blackId === id) room.chess.blackId = null; }
-        if (room.vier) { if (room.vier.rId === id) room.vier.rId = null; if (room.vier.yId === id) room.vier.yId = null; }
-        if (room.wolf && room.wolf.alive[id] !== undefined) { room.wolf.alive[id] = false; room.wolf.log.push('🚪 ' + p.name + ' endgültig raus (zählt als ausgeschieden).'); }
+        removePlayer(room, id); changed = true;
       }
     }
     if (room.fr && room.fr.order.length) room.fr.turnIdx %= room.fr.order.length;

@@ -40,15 +40,23 @@ Erwartete Ausgabe am Ende:
   Handy: http://192.168.1.70:8080/play?room=<CODE>
 ```
 
-## Spielen
+## Spielen (Rumpus-Prinzip: TV ist Host, Handy ist Controller)
 
-1. TV-Browser (Fire TV / Smart-TV / Laptop per HDMI) öffnen: `http://<LXC-IP>:8080/` → Spiel wählen → Raum-Code (z. B. `KQ7M`) erscheint
-2. Handys im selben WLAN: `http://<LXC-IP>:8080/play?room=KQ7M` → Namen eingeben → losspielen
+1. **TV** öffnen: `http://<LXC-IP>:8080/tv` → erstellt **automatisch** einen Raum und zeigt **Code + QR + Beitritts-URL** groß an. Kein Erstellen per Hand nötig.
+2. **Handys** (gleiches WLAN): URL vom TV öffnen oder **QR scannen** → **Code + Name + Emoji** eingeben → „Beitreten“. Wer drin ist, erscheint **live auf dem TV** (mit Emoji, inkl. Rauswurf per ✕ am TV).
 3. **Ohne TV geht alles auch:** Jedes Handy hat unten eine „🎬 Spielsteuerung“ (Start/Stopp/Ziehen/Weiter) – ideal, wenn ihr in **verschiedenen Zimmern** sitzt. Einladungs-Link per „🔗 Einladungs-Link kopieren“ teilen.
 4. Quiz: TV/Handy zeigt Frage, Handy antwortet (15 s). Schach: **Brett antippen** (Figur → grüne Punkte → Ziel), Brett dreht sich je nach Farbe mit. Farbrausch: Handkarten tippen, „Karte ziehen“ wenn nichts passt.
 5. SLF: Buchstabe am TV/Handy, Wörter am Handy, Stopp + Auswerten von überall, ungültige Wörter antippbar. Bingo: Karte automatisch aufs Handy, „BINGO rufen“ wird geprüft. Vier: Farbe wählen, Spalte tippen. Wölfe: Rolle geheim aufs Handy, nachts handeln, tags abstimmen – Moderation von TV oder Handy.
 6. Geheimworte: Chef-Ansicht (Farb-Schlüssel) vs. Rate-Ansicht (Wörter antippen) auf dem Handy. Bluff: Hole Cards geheim, Check/Call/Fold-Buttons, Pot + Community Cards auf TV. Malen: Finger-Canvas auf Handy (5 Farben), Raten per Text, Punkte für Rater + Maler. Würfel: Würfel antippen = halten, Kategorien-Blatt, Bonus ab 63. Wortverbot: Karte nur für Erklärer + Gegner-Team sichtbar, Richtig/Skip/Verstoß-Buttons, Teamwechsel nach 60 s.
 7. **Komfort:** „🔔 DU bist am Zug“ + Ton/Vibration, Online-Punkte (●/○), Sitz/Hand/Punkte überleben WLAN-Abbrüche (autom. Reconnect, 10 Min. Karenz). Offline-Spieler bei Farbrausch per „⏭ Zug überspringen“ übergehbar.
+
+## Neu in v0.6.0 (Rumpus-Join)
+
+- TV erstellt Raum automatisch (kein Umweg mehr), zeigt permanent Code + URL + QR
+- Handy: zuerst Code + Name + Emoji, inline Fehler („Raum gibt es nicht“), danach „Du bist drin 👀“ + Live-Roster
+- Spiele-Picker mit Sperre („Braucht N+ Spieler“), Host kann Spieler kicken
+- Mindestspieler werden serverseitig durchgesetzt (mit Begründung), Startfehler als Meldung statt Funkstille
+- Identität (Name + Emoji) bleibt bei Reconnect erhalten
 
 ## Neu in v0.4.0
 

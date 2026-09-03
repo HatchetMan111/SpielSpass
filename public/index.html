@@ -1,36 +1,20 @@
 <!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PartyPlay – Lokal spielen</title><link rel="stylesheet" href="/style.css"></head><body><div class="wrap">
 <h1>🎮 PartyPlay <span class="muted">lokal · TV + Handy</span></h1>
-<div class="card"><h2>1 · TV-Raum erstellen</h2>
-<input id="tvname" placeholder="Name für TV (z.B. Wohnzimmer-TV)" value="TV">
 <div class="cards">
-<div class="gcard"><h2>❓ Quiz</h2><p class="muted">2–12 Spieler · 10 Fragen · Punkte für Tempo</p><button class="btn" onclick="create('quiz')">Starten</button></div>
-<div class="gcard"><h2>♟ Schach</h2><p class="muted">2 Spieler · Brett antippen am Handy</p><button class="btn" onclick="create('chess')">Starten</button></div>
-<div class="gcard"><h2>🃏 Farbrausch</h2><p class="muted">2–6 Spieler · Farb-Kartenspiel</p><button class="btn" onclick="create('fr')">Starten</button></div>
-<div class="gcard"><h2>✏️ Stadt-Land-Fluss</h2><p class="muted">2–8 Spieler · Timer + Kontrolle</p><button class="btn" onclick="create('slf')">Starten</button></div>
-<div class="gcard"><h2>🎱 Bingo</h2><p class="muted">2–12 Spieler · Karten aufs Handy</p><button class="btn" onclick="create('bingo')">Starten</button></div>
-<div class="gcard"><h2>🔴 Vier in einer Reihe</h2><p class="muted">2 Spieler · Spalten antippen</p><button class="btn" onclick="create('vier')">Starten</button></div>
-<div class="gcard"><h2>🐺 Dorf & Wölfe</h2><p class="muted">4–12 Spieler · geheime Rollen</p><button class="btn" onclick="create('wolf')">Starten</button></div>
-<div class="gcard"><h2>🕵️ Geheimworte</h2><p class="muted">4+ Spieler · 2 Teams + Chefs</p><button class="btn" onclick="create('gw')">Starten</button></div>
-<div class="gcard"><h2>🃏 Bluff-Poker</h2><p class="muted">2–8 Spieler · Hold'em light</p><button class="btn" onclick="create('bluff')">Starten</button></div>
-<div class="gcard"><h2>🎨 Malen & Raten</h2><p class="muted">3+ Spieler · zeichnen + raten</p><button class="btn" onclick="create('mr')">Starten</button></div>
-<div class="gcard"><h2>🎲 Würfelglück</h2><p class="muted">1–6 Spieler · Kniffel-Blatt</p><button class="btn" onclick="create('wg')">Starten</button></div>
-<div class="gcard"><h2>🤐 Wortverbot</h2><p class="muted">4+ Spieler · erklären + raten</p><button class="btn" onclick="create('wv')">Starten</button></div>
+<div class="gcard"><h2>📺 Ich bin der TV</h2><p class="muted">Großer Bildschirm: erstellt automatisch einen Raum mit Code + QR.</p>
+<button class="btn" onclick="location.href='/tv'">TV starten →</button></div>
+<div class="gcard"><h2>📱 Ich spiele mit</h2><p class="muted">Code vom TV eingeben:</p>
+<input id="pcode" class="codein" placeholder="····" maxlength="4" autocomplete="off" autocapitalize="characters">
+<button class="btn" onclick="join()">Beitreten →</button></div>
 </div>
-<p class="muted">TV öffnet danach die TV-Ansicht mit Raum-Code. Handys verbinden sich mit demselben Code.</p></div>
-<div class="card"><h2>2 · Mit Handy beitreten</h2>
-<input id="pname" placeholder="Dein Name">
-<input id="pcode" placeholder="Raum-Code (z.B. AB12)" maxlength="4" style="text-transform:uppercase">
-<button class="btn" onclick="join()">Beitreten → Controller</button></div>
-<div class="card muted">Läuft komplett im privaten Netzwerk. Kein Internet nötig (außer Installation). Web-UI: <span id="here"></span><br>TV: <code>/tv?room=CODE</code> · Handy: <code>/play?room=CODE</code></div>
-</div><script src="/socket.io/socket.io.js"></script><script>
+<div class="card"><h2>So geht's</h2>
+<div>1️⃣ Alle im <b>gleichen WLAN</b> · 2️⃣ TV zeigt <b>Code + QR</b> · 3️⃣ Handy: Code + Name + Emoji, los!</div>
+<div class="muted">Läuft komplett im privaten Netzwerk: <span id="here"></span> · Kein Internet, kein Konto, keine App.</div></div>
+<div class="card"><h2>12 Spiele</h2><p class="muted">❓ Quiz · ♟ Schach · 🃏 Farbrausch · ✏️ Stadt-Land-Fluss · 🎱 Bingo · 🔴 Vier in Reihe · 🐺 Dorf &amp; Wölfe · 🕵️ Geheimworte · 🃏 Bluff-Poker · 🎨 Malen &amp; Raten · 🎲 Würfelglück · 🤐 Wortverbot</p></div>
+</div><script>
 document.getElementById('here').textContent = location.origin;
-const io_ = io();
-function pid_(){ try{ let p=localStorage.getItem('pp_pid'); if(!p){p='tv-'+Math.random().toString(36).slice(2);localStorage.setItem('pp_pid',p);} return p; }catch(e){ return null; } }
-function create(game){ const name=document.getElementById('tvname').value||'TV';
- io_.emit('create-room',{name,game,pid:pid_()},r=>{ if(r.ok) location.href='/tv?room='+r.code; else alert(r.err); }); }
 function join(){ const code=document.getElementById('pcode').value.trim().toUpperCase();
- const name=document.getElementById('pname').value||'Spieler';
- if(code.length!==4) return alert('4-stelligen Code eingeben');
- location.href='/play?room='+code+'&name='+encodeURIComponent(name); }
+ if(code.length!==4) return alert('4-stelligen Code vom TV eingeben');
+ location.href='/play?room='+code; }
 </script></body></html>

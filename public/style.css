@@ -42,6 +42,21 @@ table.sheet{border-collapse:collapse;width:100%;font-size:15px}
 table.sheet th,table.sheet td{border:1px solid #475569;padding:6px 8px;text-align:center}
 table.sheet td:first-child,table.sheet th:first-child{text-align:left;color:#94a3b8}
 #mycv,#tvpic{touch-action:none;cursor:crosshair}
+/* Rumpus-Host: Code + QR oben */
+.hostbar{display:flex;gap:16px;align-items:center;justify-content:space-between}
+.joinurl{font-size:clamp(18px,3.5vw,30px);font-weight:800;color:#7dd3fc;word-break:break-all}
+.code{font-size:clamp(44px,9vw,72px);letter-spacing:10px;font-weight:900;color:#fde68a;line-height:1.1}
+.chip{display:inline-flex;align-items:center;gap:6px;background:#334155;border-radius:999px;padding:8px 8px 8px 14px;margin:4px;font-size:18px;font-weight:700}
+.chip.off{opacity:.45}
+.kick{background:#7f1d1d;color:#fff;border:0;border-radius:50%;width:28px;height:28px;font-size:14px;cursor:pointer;margin-left:4px}
+.gcard.live{border:2px solid #22c55e}
+.metag{position:sticky;top:0;z-index:5;background:#1e293b;border:1px solid #334155;border-radius:12px;padding:10px 14px;font-weight:800;font-size:17px;margin:10px 0;display:flex;justify-content:space-between;align-items:center}
+/* Join-Formular (Handy zuerst) */
+.codein{font-size:34px !important;letter-spacing:12px;text-align:center;text-transform:uppercase;font-weight:900}
+.avrow{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.avrow button{font-size:28px;background:#334155;border:3px solid transparent;border-radius:12px;padding:6px 10px;cursor:pointer}
+.avrow button.sel{border-color:#fbbf24;background:#475569}
+.joinerr{color:#fca5a5;font-weight:700;min-height:24px;text-align:center}
 input,select{width:100%;padding:14px;font-size:17px;border-radius:10px;border:1px solid #475569;background:#0f172a;color:#fff;margin:6px 0}
 .code{font-size:56px;letter-spacing:8px;font-weight:900;text-align:center;color:#fde68a}
 .muted{color:#94a3b8}.row{display:flex;gap:8px}.row>*{flex:1}

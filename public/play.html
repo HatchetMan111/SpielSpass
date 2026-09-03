@@ -1,9 +1,16 @@
 <!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>PartyPlay Controller</title><link rel="stylesheet" href="/style.css"></head><body><div class="wrap">
-<h1>📱 Controller <span class="muted" id="code"></span></h1>
-<div class="card" id="joinBox"><input id="name" placeholder="Dein Name" maxlength="24"><button class="btn" onclick="doJoin()">Beitreten</button>
-<p class="muted">Bleibst du im selben WLAN, stellt die App deine Sitzung nach Abbrüchen automatisch wieder her.</p></div>
-<div class="muted center" id="who"></div>
+<title>PartyPlay – Mitspielen</title><link rel="stylesheet" href="/style.css"></head><body><div class="wrap">
+<h1>📱 Mitspielen</h1>
+<div class="card" id="joinBox">
+<label>Raum-Code vom TV<input id="codein" class="codein" maxlength="4" placeholder="····" autocomplete="off" autocapitalize="characters"></label>
+<label>Dein Name<input id="name" placeholder="z.B. Alex" maxlength="24" autocomplete="off"></label>
+<div class="muted">Dein Emoji:</div><div class="avrow" id="avrow"></div>
+<div class="joinerr" id="joinerr"></div>
+<button class="btn" onclick="doJoin()">Beitreten →</button>
+<p class="muted center">Code steht groß auf dem TV – oder QR scannen, dann ist er schon eingetragen.</p></div>
+<div class="metag" id="metag" style="display:none"><span id="who"></span><span class="muted" id="g"></span></div>
 <div id="game"></div>
-<p class="center muted"><a href="/">Lobby</a> · <span id="g"></span></p></div>
+<div class="card center" id="connBox" style="display:none">📡 Verbindung weg – verbinde neu… deine Sitzung bleibt erhalten.</div>
+<div class="card center" id="kickBox" style="display:none"><h2>Rausgeworfen 🥾</h2><p>Der Host (TV) hat dich entfernt.</p><button class="btn" onclick="location.href='/play'">Neu beitreten</button></div>
+<p class="center muted"><a href="/">Start</a></p></div>
 <script src="/socket.io/socket.io.js"></script><script src="/play.js"></script></body></html>

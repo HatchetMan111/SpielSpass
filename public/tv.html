@@ -1,16 +1,14 @@
 <!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PartyPlay TV</title><link rel="stylesheet" href="/style.css"></head><body><div class="wrap">
-<div class="center"><div class="muted">HANDY VERBINDEN MIT</div><div class="code" id="code">----</div>
-<div class="muted" id="url"></div></div>
-<div class="card center row">
-<button class="btn alt" onclick="sel('quiz')">Quiz</button><button class="btn alt" onclick="sel('chess')">Schach</button><button class="btn alt" onclick="sel('fr')">Farbrausch</button>
+<div class="hostbar card">
+<div><div class="muted">📱 Handy öffnen:</div><div class="joinurl" id="url">…</div>
+<div class="muted">Code eingeben:</div><div class="code" id="code">····</div></div>
+<div class="center"><canvas id="qr" width="148" height="148"></canvas><div class="muted">QR scannen 📷</div></div>
 </div>
-<div class="card center row">
-<button class="btn alt" onclick="sel('slf')">SLF</button><button class="btn alt" onclick="sel('bingo')">Bingo</button><button class="btn alt" onclick="sel('vier')">Vier</button><button class="btn alt" onclick="sel('wolf')">Wölfe</button>
-</div>
-<div class="card center row">
-<button class="btn alt" onclick="sel('gw')">Geheimworte</button><button class="btn alt" onclick="sel('bluff')">Poker</button><button class="btn alt" onclick="sel('mr')">Malen</button><button class="btn alt" onclick="sel('wg')">Würfel</button><button class="btn alt" onclick="sel('wv')">Wortverbot</button>
-</div>
+<div class="card" id="lobby"><h2>Drin (<span id="pcount">0</span>) – Spiel wählen</h2>
+<div id="chips"><span class="muted">Handys verbinden sich gerade…</span></div>
+<div class="cards" id="picker"></div>
+<p class="muted">So geht's: 1. Gleiches WLAN 2. URL öffnen oder QR scannen 3. Code + Name eingeben, los!</p></div>
 <div id="quizCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('quiz:start')">Quiz starten</button>
 <button class="btn alt" onclick="q('quiz:next')">Weiter →</button></div>
 <div id="chessCtl" class="card center" style="display:none"><button class="btn alt" onclick="q('chess:reset')">Neues Spiel</button></div>
@@ -22,17 +20,17 @@
 <div id="bingoCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('bingo:start')">Neues Spiel</button>
 <button class="btn" onclick="s.emit('bingo:draw',r=>{if(r&&!r.ok)alert(r.err||'Fehler')})">Zahl ziehen 🎱</button></div>
 <div id="vierCtl" class="card center" style="display:none"><button class="btn alt" onclick="q('vier:reset')">Neues Spiel</button></div>
-<div id="wolfCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('wolf:start')">Spiel starten (Rollen verteilen)</button>
+<div id="wolfCtl" class="card center" style="display:none"><button class="btn warn" onclick="s.emit('wolf:start',r=>{if(r&&!r.ok)alert(r.err)})">Spiel starten (Rollen verteilen)</button>
 <button class="btn alt" onclick="s.emit('wolf:endnight')">Nacht beenden → Tag</button>
 <button class="btn alt" onclick="s.emit('wolf:endday')">Abstimmung beenden → Nacht</button></div>
-<div id="gwCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('gw:start')">Neue Runde</button></div>
-<div id="bluffCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('bluff:start')">Neue Hand geben</button></div>
-<div id="mrCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('mr:start')">Neue Runde (nächster malt)</button>
+<div id="gwCtl" class="card center" style="display:none"><button class="btn warn" onclick="s.emit('gw:start',r=>{if(r&&!r.ok)alert(r.err)})">Neue Runde</button></div>
+<div id="bluffCtl" class="card center" style="display:none"><button class="btn warn" onclick="s.emit('bluff:start',r=>{if(r&&!r.ok)alert(r.err)})">Neue Hand geben</button></div>
+<div id="mrCtl" class="card center" style="display:none"><button class="btn warn" onclick="s.emit('mr:start',r=>{if(r&&!r.ok)alert(r.err)})">Neue Runde (nächster malt)</button>
 <button class="btn alt" onclick="s.emit('mr:end')">Runde beenden</button></div>
-<div id="wgCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('wg:start')">Neues Spiel</button></div>
-<div id="wvCtl" class="card center" style="display:none"><button class="btn warn" onclick="q('wv:start')">Neues Spiel (Teams mischen)</button>
+<div id="wgCtl" class="card center" style="display:none"><button class="btn warn" onclick="s.emit('wg:start',r=>{if(r&&!r.ok)alert(r.err)})">Neues Spiel</button></div>
+<div id="wvCtl" class="card center" style="display:none"><button class="btn warn" onclick="s.emit('wv:start',r=>{if(r&&!r.ok)alert(r.err)})">Neues Spiel (Teams mischen)</button>
 <button class="btn alt" onclick="s.emit('wv:endturn')">Durchgang beenden → Teamwechsel</button></div>
 <div id="stage"></div>
 <div class="card"><h2>Punkte / Spieler</h2><div id="players"></div></div>
-<p class="center"><a href="/">← Lobby</a></p></div>
-<script src="/socket.io/socket.io.js"></script><script src="/tv.js"></script></body></html>
+<p class="center"><a href="/">← Start</a></p></div>
+<script src="/socket.io/socket.io.js"></script><script src="/vendor/qrcode.js"></script><script src="/tv.js"></script></body></html>

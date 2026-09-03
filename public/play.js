@@ -6,28 +6,95 @@ try {
   if (!PID) { PID = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('pp_pid', PID); }
 } catch (e) { PID = 'sess-' + Math.random().toString(36).slice(2); }
 const qs = new URLSearchParams(location.search);
-const CODE = (qs.get('room') || '').toUpperCase();
+let CODE = (qs.get('room') || '').toUpperCase();
 const s = io();
-document.getElementById('code').textContent = CODE;
-let storedName = '';
-try { storedName = localStorage.getItem('pp_name') || ''; } catch (e) {}
+const AVATARS = ['🦊', '🐼', '🐸', '🦁', '🐯', '🐨', '🐵', '🦄', '🐝', '⚽', '🎮', '🚀'];
+let myAvatar = '🦊', storedName = '';
+try {
+  myAvatar = localStorage.getItem('pp_avatar') || '🦊';
+  storedName = localStorage.getItem('pp_name') || '';
+} catch (e) {}
+document.getElementById('codein').value = CODE;
 document.getElementById('name').value = qs.get('name') || storedName || '';
+function paintAv() {
+  document.getElementById('avrow').innerHTML = AVATARS.map(a => `<button type="button" class="${a === myAvatar ? 'sel' : ''}" onclick="pickAv('${a}')">${a}</button>`).join('');
+}
+function pickAv(a) { myAvatar = a; try { localStorage.setItem('pp_avatar', a); } catch (e) {} paintAv(); }
+paintAv();
 let S = null, lastGame = null, lastKey = null, selSq = null;
 let myRole = null, myCard = null, myDrawn = [];
-s.on('connect', () => { if (qs.get('name')) doJoin(); });
+let myName = null, joinedRoom = null, kickedFlag = false;
+s.on('connect', () => {
+  document.getElementById('connBox').style.display = 'none';
+  if (kickedFlag) return;
+  if (!joinedRoom && qs.get('name')) doJoin();
+  else if (joinedRoom && myName) doJoin(true);
+});
+s.on('disconnect', () => {
+  if (!kickedFlag) document.getElementById('connBox').style.display = '';
+});
+s.on('kicked', () => {
+  kickedFlag = true; joinedRoom = null;
+  document.getElementById('joinBox').style.display = 'none';
+  document.getElementById('metag').style.display = 'none';
+  document.getElementById('connBox').style.display = 'none';
+  document.getElementById('game').innerHTML = '';
+  document.getElementById('kickBox').style.display = '';
+});
 s.on('state', st => {
   if (lastGame !== null && lastGame !== st.game) { myRole = null; myCard = null; lastKey = null; amChef = null; }
   lastGame = st.game; selSq = null;
   S = st; document.getElementById('g').textContent = 'Spiel: ' + gameName(st.game); render();
 });
-function doJoin() {
-  const name = (document.getElementById('name').value || 'Spieler').slice(0, 24);
-  s.emit('join-room', { code: CODE, name, pid: PID }, r => {
-    if (!r.ok) { alert(r.err); return; }
+function doJoin(silent) {
+  const code = (document.getElementById('codein').value || '').toUpperCase().trim();
+  const name = (document.getElementById('name').value || '').trim().slice(0, 24);
+  const errBox = document.getElementById('joinerr');
+  if (!silent) errBox.textContent = '';
+  if (code.length !== 4) { if (!silent) errBox.textContent = 'Bitte den 4-stelligen Code vom TV eingeben.'; return; }
+  if (!name) { if (!silent) errBox.textContent = 'Bitte deinen Namen eingeben.'; return; }
+  CODE = code;
+  s.emit('join-room', { code, name, pid: PID, avatar: myAvatar }, r => {
+    if (!r.ok) {
+      if (silent) {
+        joinedRoom = null;
+        document.getElementById('joinBox').style.display = '';
+        document.getElementById('metag').style.display = 'none';
+        errBox.textContent = 'Raum gibt es nicht mehr – bitte neu beitreten.';
+      } else errBox.textContent = r.err || 'Beitreten fehlgeschlagen.';
+      return;
+    }
+    myName = name; joinedRoom = code;
+    try { localStorage.setItem('pp_name', name); localStorage.setItem('pp_avatar', myAvatar); } catch (e) {}
     document.getElementById('joinBox').style.display = 'none';
-    try { localStorage.setItem('pp_name', name); } catch (e) {}
-    document.getElementById('who').textContent = 'Verbunden als ' + name + (r.relinked ? ' (Sitzung wiederhergestellt ✅)' : '');
+    document.getElementById('connBox').style.display = 'none';
+    document.getElementById('metag').style.display = '';
+    document.getElementById('who').textContent = myAvatar + ' ' + name + ' · Raum ' + code + (r.relinked ? ' ✅' : '');
   });
+}
+function roster() {
+  if (!S) return '';
+  const others = S.players.filter(p => p.id !== s.id && p.id !== S.hostId);
+  let h = others.length ? '<div class="center">' + others.map(p => `<span class="chip${p.online === false ? ' off' : ''}">${esc(p.avatar || '🙂')} ${esc(p.name)}</span>`).join('') + '</div>' : '';
+  if (isWaiting()) h += '<div class="center muted">Du bist drin! 👀 Schau auf den TV…</div>';
+  return h;
+}
+function isWaiting() {
+  if (!S) return true;
+  const g = S.game;
+  if (g === 'quiz') return !S.quiz || S.quiz.phase === 'lobby';
+  if (g === 'chess') return !S.chess;
+  if (g === 'fr') return !S.fr;
+  if (g === 'slf') return !S.slf;
+  if (g === 'bingo') return !S.bingo;
+  if (g === 'vier') return !S.vier;
+  if (g === 'wolf') return !S.wolf || S.wolf.phase === 'lobby';
+  if (g === 'gw') return !S.gw;
+  if (g === 'bluff') return !S.bluff;
+  if (g === 'mr') return !S.mr;
+  if (g === 'wg') return !S.wg;
+  if (g === 'wv') return !S.wv;
+  return true;
 }
 function gameName(g) { return { quiz: 'Quiz', chess: 'Schach', fr: 'Farbrausch', slf: 'Stadt-Land-Fluss', bingo: 'Bingo', vier: 'Vier in einer Reihe', wolf: 'Dorf & Wölfe', gw: 'Geheimworte', bluff: 'Bluff-Poker', mr: 'Malen & Raten', wg: 'Würfelglück', wv: 'Wortverbot' }[g] || g; }
 function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
@@ -118,7 +185,9 @@ function banner() {
   return `<div class="turnb${ti.mine ? ' me' : ''}">${esc(ti.text)}</div>`;
 }
 function controls() {
-  const B = (ev, label, warn) => `<button class="btn${warn ? ' warn' : ' alt'}" onclick="s.emit('${ev}')">${label}</button>`;
+  const B = (ev, label, warn) => warn
+    ? `<button class="btn warn" onclick="s.emit('${ev}',r=>{if(r&&!r.ok)alert(r.err||'Geht gerade nicht')})">${label}</button>`
+    : `<button class="btn alt" onclick="s.emit('${ev}')">${label}</button>`;
   const map = {
     quiz: B('quiz:start', '▶ Quiz starten', 1) + B('quiz:next', 'Weiter →'),
     chess: B('chess:reset', '🔄 Neues Spiel'),
@@ -138,7 +207,7 @@ function controls() {
 function render() {
   const el = document.getElementById('game');
   if (!S) { el.innerHTML = ''; return; }
-  const head = banner() + `<div class="center"><button class="btn alt" onclick="copyLink()">🔗 Einladungs-Link kopieren</button></div>`;
+  const head = banner() + roster() + `<div class="center"><button class="btn alt" onclick="copyLink()">🔗 Einladungs-Link kopieren</button></div>`;
   if (S.game === 'quiz') {
     if (!S.quiz || S.quiz.phase === 'lobby') { el.innerHTML = head + '<div class="card">Warte auf Start… oder starte selbst unten.</div>' + controls(); return; }
     if (S.quiz.phase === 'done') { el.innerHTML = head + '<div class="card"><h2>Fertig!</h2>Sieh aufs TV für das Ergebnis.</div>' + controls(); return; }

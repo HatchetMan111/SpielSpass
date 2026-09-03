@@ -1,20 +1,92 @@
 'use strict';
 const qs = new URLSearchParams(location.search);
-const CODE = (qs.get('room') || '').toUpperCase();
+let CODE = (qs.get('room') || '').toUpperCase();
 const s = io();
 let TVPID = null;
 try { TVPID = localStorage.getItem('pp_pid'); if (!TVPID) { TVPID = 'tv-' + Math.random().toString(36).slice(2); localStorage.setItem('pp_pid', TVPID); } } catch (e) { TVPID = null; }
-document.getElementById('code').textContent = CODE;
-document.getElementById('url').textContent = location.origin + '/play?room=' + CODE;
 const stage = document.getElementById('stage'), playersEl = document.getElementById('players');
-let S = null;
-s.emit('join-room', { code: CODE, name: 'TV', pid: TVPID }, r => { if (!r.ok) stage.innerHTML = '<div class="card">Fehler: ' + r.err + '</div>'; });
+let S = null, joinedOk = false, recreated = false;
+const GAMES = [
+  { id: 'quiz', name: '❓ Quiz', desc: 'Fragen + Punkte', min: 1 },
+  { id: 'chess', name: '♟ Schach', desc: '2 Spieler · Brett tippen', min: 2 },
+  { id: 'fr', name: '🃏 Farbrausch', desc: '2–6 · Kartenspiel', min: 2 },
+  { id: 'slf', name: '✏️ Stadt-Land-Fluss', desc: 'Timer + Kontrolle', min: 1 },
+  { id: 'bingo', name: '🎱 Bingo', desc: 'Karten aufs Handy', min: 1 },
+  { id: 'vier', name: '🔴 Vier in Reihe', desc: '2 Spieler', min: 2 },
+  { id: 'wolf', name: '🐺 Dorf & Wölfe', desc: '4–12 · Rollen', min: 4 },
+  { id: 'gw', name: '🕵️ Geheimworte', desc: '2 Teams + Chefs', min: 3 },
+  { id: 'bluff', name: '🃏 Bluff-Poker', desc: '2–8 · Chips', min: 2 },
+  { id: 'mr', name: '🎨 Malen & Raten', desc: '3+ · Canvas', min: 2 },
+  { id: 'wg', name: '🎲 Würfelglück', desc: '1–6 · Kniffel', min: 1 },
+  { id: 'wv', name: '🤐 Wortverbot', desc: '2 Teams · 60 s', min: 4 },
+];
+function boot() {
+  if (!CODE) {
+    s.emit('create-room', { name: 'TV', game: 'quiz', pid: TVPID, avatar: '📺' }, r => {
+      if (!r.ok) { stage.innerHTML = '<div class="card">Fehler: ' + esc(r.err || '?') + '</div>'; return; }
+      CODE = r.code;
+      try { history.replaceState(null, '', '/tv?room=' + CODE); } catch (e) {}
+      joinAsTv();
+    });
+  } else joinAsTv();
+}
+function joinAsTv() {
+  paintHeader();
+  s.emit('join-room', { code: CODE, name: 'TV', pid: TVPID, avatar: '📺' }, r => {
+    if (!r.ok) {
+      if (!recreated && /gibt es nicht|Raum/.test(r.err || '')) {
+        recreated = true; CODE = '';
+        boot(); return;
+      }
+      stage.innerHTML = '<div class="card">Fehler: ' + esc(r.err || '?') + '</div>'; return;
+    }
+    joinedOk = true;
+  });
+}
+s.on('connect', boot);
+s.on('disconnect', () => { joinedOk = false; });
+function paintHeader() {
+  document.getElementById('code').textContent = CODE || '····';
+  document.getElementById('url').textContent = location.host + '/play';
+  drawQR();
+}
+function drawQR() {
+  const cv = document.getElementById('qr');
+  try {
+    if (!CODE || typeof qrcode !== 'function') { cv.style.display = 'none'; return; }
+    const qr = qrcode(0, 'M');
+    qr.addData(location.origin + '/play?room=' + CODE);
+    qr.make();
+    const n = qr.getModuleCount(), scale = Math.max(2, Math.floor(148 / n)), size = n * scale;
+    cv.width = cv.height = size; cv.style.width = cv.style.height = '148px'; cv.style.display = '';
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = '#000';
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) ctx.fillRect(c * scale, r * scale, scale, scale);
+  } catch (e) { cv.style.display = 'none'; }
+}
+function kick(id) { s.emit('host:kick', { playerId: id }, r => { if (r && !r.ok) alert(r.err || 'Fehler'); }); }
+function renderLobby() {
+  const phones = S.players.filter(p => p.id !== S.hostId);
+  const online = phones.filter(p => p.online !== false).length;
+  document.getElementById('pcount').textContent = online;
+  document.getElementById('chips').innerHTML = phones.length ? phones.map(p =>
+    `<span class="chip${p.online === false ? ' off' : ''}">${esc(p.avatar || '🙂')} <b>${esc(p.name)}</b><button class="kick" title="Entfernen" onclick="kick('${p.id}')">✕</button></span>`
+  ).join('') : '<span class="muted">Noch niemand da – Code und QR stehen oben.</span>';
+  document.getElementById('picker').innerHTML = GAMES.map(g => {
+    const ok = online >= g.min, active = S.game === g.id;
+    return `<div class="gcard${active ? ' live' : ''}"><h2>${g.name}</h2><p class="muted">${g.desc}</p>` +
+      (ok ? `<button class="btn${active ? '' : ' alt'}" onclick="sel('${g.id}')">${active ? '● Läuft' : 'Wählen'}</button>`
+        : `<button class="btn alt" disabled style="opacity:.4">Wählen</button><div class="muted">Braucht ${g.min}+ Spieler</div>`) + '</div>';
+  }).join('');
+}
 s.on('state', st => { S = st; render(); });
 function sel(g) { s.emit('select-game', { game: g }); }
 function q(ev) { s.emit(ev); }
 const PIECES = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
 function render() {
   if (!S) return;
+  renderLobby();
   document.getElementById('quizCtl').style.display = S.game === 'quiz' ? '' : 'none';
   document.getElementById('chessCtl').style.display = S.game === 'chess' ? '' : 'none';
   document.getElementById('frCtl').style.display = S.game === 'fr' ? '' : 'none';
