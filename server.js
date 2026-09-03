@@ -45,7 +45,7 @@ function newCode() {
 }
 function roomState(room) {
   return {
-    code: room.code, game: room.game,
+    code: room.code, game: room.game, hostId: room.hostId,
     players: [...room.players.values()].map(p => ({ id: p.id, name: p.name, online: p.online !== false })),
     quiz: room.quiz ? { qIndex: room.quiz.qIndex, total: QUIZ.length, scores: room.quiz.scores, phase: room.quiz.phase, current: room.quiz.phase === 'question' ? { q: QUIZ[room.quiz.qIndex].q, choices: QUIZ[room.quiz.qIndex].choices } : null, lastResult: room.quiz.lastResult || null } : null,
     chess: room.chess ? { board: room.chess.board, turn: room.chess.turn, history: room.chess.history, white: nameOf(room, room.chess.whiteId), black: nameOf(room, room.chess.blackId), whiteId: room.chess.whiteId, blackId: room.chess.blackId, whiteOnline: (room.players.get(room.chess.whiteId) || {}).online !== false, blackOnline: (room.players.get(room.chess.blackId) || {}).online !== false, legal: legalMovesMap(room.chess.board, room.chess.turn), lastMove: lastMoveOf(room.chess.history) } : null,
@@ -504,7 +504,7 @@ for (let i = 0; i + 5 < WV_RAW.length; i += 6) WV_CARDS.push(WV_RAW.slice(i, i +
 io.on('connection', (socket) => {
   socket.emit('hello', { app: 'partyplay' });
 
-  socket.on('create-room', ({ name, game, pid }, cb) => {
+  socket.on('create-room', ({ name, game, pid } = {}, cb) => {
     try {
       const code = newCode();
       const room = { code, players: new Map(), game: game || 'quiz', quiz: null, chess: null, fr: null, hostId: socket.id };
@@ -518,7 +518,7 @@ io.on('connection', (socket) => {
     } catch (e) { cb && cb({ ok: false, err: String(e && e.message || e) }); }
   });
 
-  socket.on('join-room', ({ code, name, pid }, cb) => {
+  socket.on('join-room', ({ code, name, pid } = {}, cb) => {
     try {
       code = String(code || '').toUpperCase().trim();
       const room = rooms.get(code);
@@ -541,7 +541,7 @@ io.on('connection', (socket) => {
     } catch (e) { cb && cb({ ok: false, err: String(e && e.message || e) }); }
   });
 
-  socket.on('select-game', ({ game }) => {
+  socket.on('select-game', ({ game } = {}) => {
     const room = rooms.get(socket.data.code); if (!room) return;
     room.game = game; ensureGame(room, true); broadcast(room.code);
   });
@@ -554,7 +554,7 @@ io.on('connection', (socket) => {
     for (const id of room.players.keys()) room.quiz.scores[id] = 0;
     quizAsk(room);
   });
-  socket.on('quiz:answer', ({ choice }) => {
+  socket.on('quiz:answer', ({ choice } = {}) => {
     const room = rooms.get(socket.data.code); if (!room || !room.quiz || room.quiz.phase !== 'question') return;
     if (socket.id === room.hostId) return; // TV antwortet nicht
     if (room.quiz.answers[socket.id] !== undefined) return;
@@ -572,14 +572,14 @@ io.on('connection', (socket) => {
   });
 
   // Schach
-  socket.on('chess:seat', ({ color }) => {
+  socket.on('chess:seat', ({ color } = {}) => {
     const room = rooms.get(socket.data.code); if (!room) return;
     room.game = 'chess'; ensureGame(room);
     if (color === 'w') room.chess.whiteId = socket.id;
     if (color === 'b') room.chess.blackId = socket.id;
     broadcast(room.code);
   });
-  socket.on('chess:move', ({ from, to }, cb) => {
+  socket.on('chess:move', ({ from, to } = {}, cb) => {
     const room = rooms.get(socket.data.code); if (!room || !room.chess) return cb && cb({ ok: false, err: 'Kein Schachspiel' });
     const r = tryMove(room.chess, String(from || '').toLowerCase(), String(to || '').toLowerCase());
     broadcast(room.code);
@@ -604,7 +604,7 @@ io.on('connection', (socket) => {
     room.fr = { order, hands, deck, discard: [top], color: top.color, turnIdx: 0, dir: 1, winner: null };
     broadcast(room.code);
   });
-  socket.on('fr:play', ({ cardId, color }, cb) => {
+  socket.on('fr:play', ({ cardId, color } = {}, cb) => {
     const room = rooms.get(socket.data.code); if (!room || !room.fr || room.fr.winner) return cb && cb({ ok: false, err: 'Kein Farbrausch-Spiel' });
     const pid = socket.id;
     if (room.fr.order[room.fr.turnIdx] !== pid) return cb && cb({ ok: false, err: 'Nicht am Zug' });
@@ -643,7 +643,7 @@ io.on('connection', (socket) => {
   });
 
   // Stadt-Land-Fluss
-  socket.on('slf:start', ({ cats }) => {
+  socket.on('slf:start', ({ cats } = {}) => {
     const room = rooms.get(socket.data.code); if (!room) return;
     room.game = 'slf';
     const list = (Array.isArray(cats) && cats.length ? cats : SLF_CATS_DEFAULT).map(s => String(s).slice(0, 16)).slice(0, 8);
@@ -655,7 +655,7 @@ io.on('connection', (socket) => {
     room.slf.timer = setTimeout(() => { if (room.slf && room.slf.phase === 'write') { room.slf.phase = 'reveal'; broadcast(room.code); } }, 90000);
     broadcast(room.code);
   });
-  socket.on('slf:submit', ({ answers }) => {
+  socket.on('slf:submit', ({ answers } = {}) => {
     const room = rooms.get(socket.data.code); if (!room || !room.slf || room.slf.phase !== 'write') return;
     if (socket.id === room.hostId || !room.slf.answers[socket.id]) return;
     for (const c of room.slf.cats) room.slf.answers[socket.id][c] = String((answers || {})[c] || '').slice(0, 30);
@@ -666,7 +666,7 @@ io.on('connection', (socket) => {
     if (room.slf.timer) clearTimeout(room.slf.timer);
     room.slf.phase = 'reveal'; broadcast(room.code);
   });
-  socket.on('slf:toggle', ({ pid, cat }) => {
+  socket.on('slf:toggle', ({ pid, cat } = {}) => {
     const room = rooms.get(socket.data.code); if (!room || !room.slf || room.slf.phase !== 'reveal') return;
     if (!room.slf.valid[pid]) return;
     room.slf.valid[pid][cat] = room.slf.valid[pid][cat] === false ? true : false;
@@ -712,15 +712,15 @@ io.on('connection', (socket) => {
   });
 
   // Vier in einer Reihe
-  socket.on('vier:seat', ({ color }) => {
+  socket.on('vier:seat', ({ color } = {}) => {
     const room = rooms.get(socket.data.code); if (!room) return;
     room.game = 'vier'; ensureGame(room);
     if (color === 'R') room.vier.rId = socket.id;
     if (color === 'Y') room.vier.yId = socket.id;
     broadcast(room.code);
   });
-  socket.on('vier:drop', ({ col }, cb) => {
-    const room = rooms.get(socket.data.code); if (!room || !room.vier || room.vier.winner) return cb && cb({ ok: false, err: 'Kein Spiel' });
+  socket.on('vier:drop', ({ col } = {}, cb) => {
+    const room = rooms.get(socket.data.code); if (!room || !room.vier || room.vier.winner) return cb && cb({ ok: false, err: room && room.vier && room.vier.winner ? 'Spiel vorbei – Neues Spiel starten' : 'Kein Vier-Spiel' });
     const color = room.vier.turn;
     const seat = color === 'R' ? room.vier.rId : room.vier.yId;
     if (socket.id !== seat) return cb && cb({ ok: false, err: 'Nicht am Zug (' + (color === 'R' ? 'Rot' : 'Gelb') + ')' });
@@ -754,7 +754,7 @@ io.on('connection', (socket) => {
     const room = rooms.get(socket.data.code); if (!room || !room.wolf) return socket.emit('wrole', null);
     socket.emit('wrole', room.wolf.roles[socket.id] || null);
   });
-  socket.on('wolf:action', ({ target }, cb) => {
+  socket.on('wolf:action', ({ target } = {}, cb) => {
     const room = rooms.get(socket.data.code); if (!room || !room.wolf || room.wolf.phase !== 'night') return cb && cb({ ok: false });
     if (!room.wolf.alive[socket.id]) return cb && cb({ ok: false, err: 'Du bist ausgeschieden' });
     const role = room.wolf.roles[socket.id];
@@ -783,7 +783,7 @@ io.on('connection', (socket) => {
     if (!wolfCheck(room)) room.wolf.phase = 'day';
     broadcast(room.code);
   });
-  socket.on('wolf:vote', ({ target }, cb) => {
+  socket.on('wolf:vote', ({ target } = {}, cb) => {
     const room = rooms.get(socket.data.code); if (!room || !room.wolf || room.wolf.phase !== 'day') return cb && cb({ ok: false });
     if (!room.wolf.alive[socket.id] || !room.wolf.alive[target]) return cb && cb({ ok: false, err: 'Ungültige Stimme' });
     room.wolf.votes[socket.id] = target;
@@ -821,7 +821,7 @@ io.on('connection', (socket) => {
     broadcast(room.code);
     cb && cb({ ok: true });
   });
-  socket.on('gw:seat', ({ team }) => {
+  socket.on('gw:seat', ({ team } = {}) => {
     const room = rooms.get(socket.data.code); if (!room || !room.gw) return;
     if (team === 'R') room.gw.chefR = socket.id;
     if (team === 'B') room.gw.chefB = socket.id;
@@ -832,7 +832,7 @@ io.on('connection', (socket) => {
     if (socket.id === room.gw.chefR || socket.id === room.gw.chefB) socket.emit('gkey', room.gw.key);
     else socket.emit('gkey', null);
   });
-  socket.on('gw:hint', ({ word, n }, cb) => {
+  socket.on('gw:hint', ({ word, n } = {}, cb) => {
     const room = rooms.get(socket.data.code); if (!room || !room.gw || room.gw.phase !== 'hint' || room.gw.winner) return cb && cb({ ok: false });
     const chef = room.gw.turn === 'R' ? room.gw.chefR : room.gw.chefB;
     if (socket.id !== chef) return cb && cb({ ok: false, err: 'Nur der Chef des ziehenden Teams gibt Hinweise' });
@@ -845,7 +845,7 @@ io.on('connection', (socket) => {
     broadcast(room.code);
     cb && cb({ ok: true });
   });
-  socket.on('gw:guess', ({ idx }, cb) => {
+  socket.on('gw:guess', ({ idx } = {}, cb) => {
     const room = rooms.get(socket.data.code); if (!room || !room.gw || room.gw.phase !== 'guess' || room.gw.winner) return cb && cb({ ok: false });
     if (socket.id === room.gw.chefR || socket.id === room.gw.chefB) return cb && cb({ ok: false, err: 'Chefs raten nicht – das Team tippt!' });
     idx = parseInt(idx, 10);
@@ -899,7 +899,7 @@ io.on('connection', (socket) => {
     const room = rooms.get(socket.data.code); if (!room || !room.bluff) return socket.emit('bhand', null);
     socket.emit('bhand', (room.bluff.hole[socket.id] || null));
   });
-  socket.on('bluff:action', ({ act }, cb) => {
+  socket.on('bluff:action', ({ act } = {}, cb) => {
     const room = rooms.get(socket.data.code);
     const b = room && room.bluff;
     if (!b || b.phase === 'done') return cb && cb({ ok: false, err: 'Kein laufendes Spiel' });
@@ -949,7 +949,7 @@ io.on('connection', (socket) => {
     const room = rooms.get(socket.data.code); if (!room || !room.mr) return socket.emit('mword', null);
     socket.emit('mword', socket.id === room.mr.drawerId ? room.mr.word : null);
   });
-  socket.on('mr:stroke', ({ stroke }) => {
+  socket.on('mr:stroke', ({ stroke } = {}) => {
     const room = rooms.get(socket.data.code); if (!room || !room.mr || room.mr.phase !== 'draw') return;
     if (socket.id !== room.mr.drawerId || !stroke || !Array.isArray(stroke.pts)) return;
     const pts = stroke.pts.filter(p => Array.isArray(p) && p.length === 2).slice(0, 200)
@@ -966,7 +966,7 @@ io.on('connection', (socket) => {
     room.mr.strokes = [];
     broadcast(room.code);
   });
-  socket.on('mr:guess', ({ text }, cb) => {
+  socket.on('mr:guess', ({ text } = {}, cb) => {
     const room = rooms.get(socket.data.code); if (!room || !room.mr || room.mr.phase !== 'draw') return cb && cb({ ok: false });
     if (socket.id === room.mr.drawerId) return cb && cb({ ok: false, err: 'Der Maler rät nicht' });
     if (room.mr.guessed.includes(socket.id)) return cb && cb({ ok: true, right: true });
@@ -1010,7 +1010,7 @@ io.on('connection', (socket) => {
     broadcast(room.code);
     cb && cb({ ok: true, dice: w.dice });
   });
-  socket.on('wg:hold', ({ idx }, cb) => {
+  socket.on('wg:hold', ({ idx } = {}, cb) => {
     const room = rooms.get(socket.data.code);
     const w = room && room.wg;
     if (!w || w.done) return cb && cb({ ok: false });
@@ -1022,7 +1022,7 @@ io.on('connection', (socket) => {
     broadcast(room.code);
     cb && cb({ ok: true });
   });
-  socket.on('wg:score', ({ cat }, cb) => {
+  socket.on('wg:score', ({ cat } = {}, cb) => {
     const room = rooms.get(socket.data.code);
     const w = room && room.wg;
     if (!w || w.done) return cb && cb({ ok: false });
@@ -1064,7 +1064,7 @@ io.on('connection', (socket) => {
     if (socket.id === w.explainerId || (myTeam && myTeam !== w.explTeam)) socket.emit('vcard', w.deck[w.cardIdx % w.deck.length]);
     else socket.emit('vcard', null);
   });
-  socket.on('wv:next', ({ mode }, cb) => {
+  socket.on('wv:next', ({ mode } = {}, cb) => {
     const room = rooms.get(socket.data.code);
     const w = room && room.wv;
     if (!w || w.phase !== 'play') return cb && cb({ ok: false });
@@ -1135,7 +1135,7 @@ function quizReveal(room) {
     if (ch === correct) { room.quiz.scores[id] = (room.quiz.scores[id] || 0) + 100; res.push({ name: nameOf(room, id), ok: true }); }
     else res.push({ name: nameOf(room, id), ok: false });
   }
-  room.quiz.lastResult = { correct, detail: res };
+  room.quiz.lastResult = { correct, correctText: QUIZ[room.quiz.qIndex].choices[correct], question: QUIZ[room.quiz.qIndex].q, detail: res };
   room.quiz.phase = 'reveal';
   broadcast(room.code);
 }
@@ -1166,6 +1166,14 @@ setInterval(() => {
     if (changed) broadcast(code);
   }
 }, 60000);
+
+// Letzte Verteidigung: kein Client-Event darf den Party-Server killen.
+// Volle Fehlerkette loggen, Prozess läuft weiter (Räume sind kurzlebig).
+process.on('uncaughtException', (err) => {
+  console.error('==============================================================');
+  console.error('[partyplay] UNCAUGHT (Server läuft weiter):', err && err.stack || err);
+  console.error('==============================================================');
+});
 
 server.listen(PORT, HOST, () => console.log(`partyplay läuft auf http://${HOST}:${PORT}`));
 module.exports = { server, eval5, best7, cmpScore, wgScore, wgTotal, bingoWin, vierWin, legalMovesMap };

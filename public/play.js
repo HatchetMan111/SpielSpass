@@ -14,7 +14,7 @@ try { storedName = localStorage.getItem('pp_name') || ''; } catch (e) {}
 document.getElementById('name').value = qs.get('name') || storedName || '';
 let S = null, lastGame = null, lastKey = null, selSq = null;
 let myRole = null, myCard = null, myDrawn = [];
-s.on('connect', () => { if (qs.get('name') || (storedName && CODE)) doJoin(); });
+s.on('connect', () => { if (qs.get('name')) doJoin(); });
 s.on('state', st => {
   if (lastGame !== null && lastGame !== st.game) { myRole = null; myCard = null; lastKey = null; amChef = null; }
   lastGame = st.game; selSq = null;

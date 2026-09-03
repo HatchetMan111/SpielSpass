@@ -30,7 +30,7 @@ function render() {
   playersEl.innerHTML = S.players.map(p => {
     let sc = ''; if (S.quiz) sc = ' – ' + (S.quiz.scores[p.id] || 0) + ' P';
     if (S.slf) sc = ' – ' + (S.slf.scores[p.id] || 0) + ' P';
-    return '<div><span class="' + (p.online === false ? 'off' : 'on') + '">●</span> ' + esc(p.name) + sc + '</div>';
+    return '<div><span class="' + (p.online === false ? 'off' : 'on') + '">●</span> ' + esc(p.name) + (p.id === S.hostId ? ' 📺' : '') + sc + '</div>';
   }).join('') || '<span class="muted">Noch niemand verbunden – Code am Handy eingeben.</span>';
   if (S.game === 'quiz') renderQuiz(); else if (S.game === 'chess') renderChess(); else if (S.game === 'fr') renderFr();
   else if (S.game === 'slf') renderSlf(); else if (S.game === 'bingo') renderBingo(); else if (S.game === 'vier') renderVier(); else if (S.game === 'wolf') renderWolf();
@@ -39,15 +39,15 @@ function render() {
 function renderQuiz() {
   if (!S.quiz || S.quiz.phase === 'lobby') { stage.innerHTML = '<div class="tv-big">Quiz bereit – „Quiz starten“ drücken</div>'; return; }
   if (S.quiz.phase === 'done') {
-    const rank = S.players.map(p => ({ n: p.name, s: S.quiz.scores[p.id] || 0 })).sort((a, b) => b.s - a.s);
+    const rank = S.players.filter(p => p.id !== S.hostId).map(p => ({ n: p.name, s: S.quiz.scores[p.id] || 0 })).sort((a, b) => b.s - a.s);
     stage.innerHTML = '<div class="card"><h2>Endergebnis</h2>' + rank.map((r, i) => `<div>${i + 1}. ${esc(r.n)} – ${r.s} P</div>`).join('') + '</div>';
     return;
   }
   if (S.quiz.phase === 'reveal') {
-    stage.innerHTML = `<div class="card"><h2>Richtige Antwort: ${esc(S.quiz.current ? '' : '')}</h2>
-      <div class="tv-big">${esc(String(S.quiz.lastResult.correct + 1))}</div>
+    stage.innerHTML = `<div class="card"><div class="muted">${esc(S.quiz.lastResult.question || '')}</div>
+      <h2>Richtig: ${esc(S.quiz.lastResult.correctText || ('Antwort ' + (S.quiz.lastResult.correct + 1)))}</h2>
       <div>${(S.quiz.lastResult.detail || []).map(d => `<div>${d.ok ? '✅' : '❌'} ${esc(d.name)}</div>`).join('')}</div>
-      <p class="muted">Am Handy „Weiter“? Nein – Weiter am TV drücken.</p></div>`;
+      <p class="muted">Weiter am TV drücken.</p></div>`;
     return;
   }
   const c = S.quiz.current;
@@ -97,7 +97,7 @@ function renderSlf() {
     }
     h += '</div>';
     if (L.phase === 'done') {
-      const rank = S.players.map(p => ({ n: p.name, s: L.scores[p.id] || 0 })).sort((a, b) => b.s - a.s);
+      const rank = S.players.filter(p => p.id !== S.hostId).map(p => ({ n: p.name, s: L.scores[p.id] || 0 })).sort((a, b) => b.s - a.s);
       h += '<div class="card"><h2>Punktestand</h2>' + rank.map((r, i) => `<div>${i + 1}. ${esc(r.n)} – ${r.s} P</div>`).join('') + '</div>';
     }
   }
@@ -180,7 +180,7 @@ function renderMr() {
   const M = S.mr;
   let h = `<div class="muted center">Runde ${M.round} · malt: <b>${esc(M.drawer)}</b> · Wortlänge: ${M.wordLen} · geraten: ${M.guessed.join(', ') || '–'}</div>`;
   h += '<canvas id="tvpic" width="500" height="500" style="width:100%;max-width:520px;background:#f8fafc;border-radius:12px;display:block;margin:10px auto"></canvas>';
-  const rank = S.players.map(p => ({ n: p.name, s: M.scores[p.id] || 0 })).sort((a, b) => b.s - a.s);
+  const rank = S.players.filter(p => p.id !== S.hostId).map(p => ({ n: p.name, s: M.scores[p.id] || 0 })).sort((a, b) => b.s - a.s);
   h += '<div class="card"><h2>Punkte</h2>' + rank.map((r, i) => `<div>${i + 1}. ${esc(r.n)} – ${r.s}</div>`).join('') + '</div>';
   if (M.logExtra) h += `<div class="tv-big">${esc(M.logExtra)}</div>`;
   stage.innerHTML = h;
