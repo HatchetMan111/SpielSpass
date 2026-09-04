@@ -606,8 +606,10 @@ io.on('connection', (socket) => {
   // Quiz
   socket.on('quiz:start', () => {
     const room = rooms.get(socket.data.code); if (!room) return;
+    if (room.quiz?.timer) clearTimeout(room.quiz.timer);
+    if (room.quiz?.revealTimer) clearTimeout(room.quiz.revealTimer);
     room.game = 'quiz';
-    room.quiz = { qIndex: 0, scores: {}, answers: {}, phase: 'question', lastResult: null, timer: null };
+    room.quiz = { qIndex: 0, scores: {}, answers: {}, phase: 'question', lastResult: null, timer: null, revealTimer: null };
     for (const id of room.players.keys()) room.quiz.scores[id] = 0;
     quizAsk(room);
   });
@@ -620,10 +622,7 @@ io.on('connection', (socket) => {
   });
   socket.on('quiz:next', () => {
     const room = rooms.get(socket.data.code); if (!room || !room.quiz) return;
-    room.quiz.qIndex++;
-    if (room.quiz.qIndex >= QUIZ.length) { room.quiz.phase = 'done'; broadcast(room.code); return; }
-    room.quiz.answers = {}; room.quiz.lastResult = null; room.quiz.phase = 'question';
-    quizAsk(room);
+    quizNext(room);
   });
 
   // Schach
@@ -1153,7 +1152,7 @@ io.on('connection', (socket) => {
     const entry = room.players.get(socket.id);
     if (entry) { entry.online = false; entry.lastSeen = Date.now(); }
     const anyOnline = [...room.players.values()].some(p => p.online !== false);
-    if (!anyOnline) { if (room.quiz?.timer) clearTimeout(room.quiz.timer); if (room.slf?.timer) clearTimeout(room.slf.timer); if (room.mr?.timer) clearTimeout(room.mr.timer); if (room.wv?.timer) clearTimeout(room.wv.timer); rooms.delete(code); return; }
+    if (!anyOnline) { if (room.quiz?.timer) clearTimeout(room.quiz.timer); if (room.quiz?.revealTimer) clearTimeout(room.quiz.revealTimer); if (room.slf?.timer) clearTimeout(room.slf.timer); if (room.mr?.timer) clearTimeout(room.mr.timer); if (room.wv?.timer) clearTimeout(room.wv.timer); rooms.delete(code); return; }
     if (room.wolf && room.wolf.alive[socket.id]) room.wolf.log.push('🚪 ' + leftName + ' kurz weg – Reconnect stellt alles wieder her.');
     if (room.bluff && room.bluff.phase !== 'done' && !room.bluff.folded[socket.id] && room.bluff.order.includes(socket.id)) {
       room.bluff.folded[socket.id] = true; room.bluff.acted.push(socket.id);
@@ -1167,7 +1166,7 @@ io.on('connection', (socket) => {
 });
 
 function ensureGame(room, reset) {
-  if (room.game === 'quiz' && (!room.quiz || reset)) room.quiz = { qIndex: 0, scores: Object.fromEntries([...room.players.keys()].map(id => [id, 0])), answers: {}, phase: 'lobby', lastResult: null, timer: null };
+  if (room.game === 'quiz' && (!room.quiz || reset)) { if (room.quiz?.timer) clearTimeout(room.quiz.timer); if (room.quiz?.revealTimer) clearTimeout(room.quiz.revealTimer); room.quiz = { qIndex: 0, scores: Object.fromEntries([...room.players.keys()].map(id => [id, 0])), answers: {}, phase: 'lobby', lastResult: null, timer: null, revealTimer: null }; }
   if (room.game === 'chess' && (!room.chess || reset)) room.chess = { board: initBoard(), turn: 'w', history: [], whiteId: null, blackId: null };
   if (room.game === 'fr' && (!room.fr || reset)) room.fr = null;
   if (room.game === 'slf' && (!room.slf || reset)) room.slf = null;
@@ -1194,6 +1193,16 @@ function quizAsk(room) {
   broadcast(room.code);
   room.quiz.timer = setTimeout(() => quizReveal(room), 15000);
 }
+// Weiter zur nächsten Frage – vom Timer (auto) oder TV-Taste (manuell überspringen)
+function quizNext(room) {
+  if (!room.quiz) return;
+  if (room.quiz.timer) { clearTimeout(room.quiz.timer); room.quiz.timer = null; }
+  if (room.quiz.revealTimer) { clearTimeout(room.quiz.revealTimer); room.quiz.revealTimer = null; }
+  room.quiz.qIndex++;
+  if (room.quiz.qIndex >= QUIZ.length) { room.quiz.phase = 'done'; broadcast(room.code); return; }
+  room.quiz.answers = {}; room.quiz.lastResult = null; room.quiz.phase = 'question';
+  quizAsk(room);
+}
 function quizReveal(room) {
   if (!room.quiz || room.quiz.phase !== 'question') return;
   if (room.quiz.timer) clearTimeout(room.quiz.timer);
@@ -1206,6 +1215,9 @@ function quizReveal(room) {
   room.quiz.lastResult = { correct, correctText: QUIZ[room.quiz.qIndex].choices[correct], question: QUIZ[room.quiz.qIndex].q, detail: res };
   room.quiz.phase = 'reveal';
   broadcast(room.code);
+  // Auto-Weiter nach 6 s (Rumpus-Prinzip) – TV-Taste überspringt manuell
+  if (room.quiz.revealTimer) clearTimeout(room.quiz.revealTimer);
+  room.quiz.revealTimer = setTimeout(() => quizNext(room), 6000);
 }
 
 // Karteileichen: offline >10 Min → aus Spiel entfernen (Sitz/Hand/Punkte aufräumen)
@@ -1220,6 +1232,7 @@ setInterval(() => {
     if (room.fr && room.fr.order.length) room.fr.turnIdx %= room.fr.order.length;
     if (![...room.players.values()].some(p => p.online !== false)) {
       if (room.quiz?.timer) clearTimeout(room.quiz.timer);
+      if (room.quiz?.revealTimer) clearTimeout(room.quiz.revealTimer);
       if (room.slf?.timer) clearTimeout(room.slf.timer);
       if (room.mr?.timer) clearTimeout(room.mr.timer);
       if (room.wv?.timer) clearTimeout(room.wv.timer);

@@ -74,10 +74,10 @@ function renderLobby() {
     `<span class="chip${p.online === false ? ' off' : ''}">${esc(p.avatar || '🙂')} <b>${esc(p.name)}</b><button class="kick" title="Entfernen" onclick="kick('${p.id}')">✕</button></span>`
   ).join('') : '<span class="muted">Noch niemand da – Code und QR stehen oben.</span>';
   document.getElementById('picker').innerHTML = GAMES.map(g => {
-    const ok = online >= g.min, active = S.game === g.id;
-    return `<div class="gcard${active ? ' live' : ''}"><h2>${g.name}</h2><p class="muted">${g.desc}</p>` +
-      (ok ? `<button class="btn${active ? '' : ' alt'}" onclick="sel('${g.id}')">${active ? '● Läuft' : 'Wählen'}</button>`
-        : `<button class="btn alt" disabled style="opacity:.4">Wählen</button><div class="muted">Braucht ${g.min}+ Spieler</div>`) + '</div>';
+    const active = S.game === g.id;
+    const ok = online >= g.min;
+    return `<div class="gcard${active ? ' live' : ''}"><h2>${g.name}</h2><p class="muted">${g.desc} · ${g.min}+ Spieler${ok ? '' : ' (noch zu wenig drin)'}</p>` +
+      `<button class="btn${active ? '' : ' alt'}" onclick="sel('${g.id}')">${active ? '● Läuft' : 'Wählen'}</button></div>`;
   }).join('');
 }
 s.on('state', st => { S = st; render(); });
@@ -119,7 +119,7 @@ function renderQuiz() {
     stage.innerHTML = `<div class="card"><div class="muted">${esc(S.quiz.lastResult.question || '')}</div>
       <h2>Richtig: ${esc(S.quiz.lastResult.correctText || ('Antwort ' + (S.quiz.lastResult.correct + 1)))}</h2>
       <div>${(S.quiz.lastResult.detail || []).map(d => `<div>${d.ok ? '✅' : '❌'} ${esc(d.name)}</div>`).join('')}</div>
-      <p class="muted">Weiter am TV drücken.</p></div>`;
+      <p class="muted">Weiter geht's automatisch – oder „Weiter →" drücken zum Überspringen.</p></div>`;
     return;
   }
   const c = S.quiz.current;

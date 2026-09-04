@@ -188,6 +188,9 @@ function controls() {
   const B = (ev, label, warn) => warn
     ? `<button class="btn warn" onclick="s.emit('${ev}',r=>{if(r&&!r.ok)alert(r.err||'Geht gerade nicht')})">${label}</button>`
     : `<button class="btn alt" onclick="s.emit('${ev}')">${label}</button>`;
+  const G = [['quiz', '❓'], ['chess', '♟'], ['fr', '🃏'], ['slf', '✏️'], ['bingo', '🎱'], ['vier', '🔴'], ['wolf', '🐺'], ['gw', '🕵️'], ['bluff', '♠️'], ['mr', '🎨'], ['wg', '🎲'], ['wv', '🤐']];
+  const switcher = `<div class="muted">Spiel wechseln:</div><div style="display:flex;flex-wrap:wrap;gap:6px">` +
+    G.map(([id, n]) => `<button class="btn alt" style="flex:1 1 22%;padding:10px 0;${S.game === id ? 'outline:3px solid #22c55e' : ''}" onclick="s.emit('select-game',{game:'${id}'})">${n}</button>`).join('') + '</div>';
   const map = {
     quiz: B('quiz:start', '▶ Quiz starten', 1) + B('quiz:next', 'Weiter →'),
     chess: B('chess:reset', '🔄 Neues Spiel'),
@@ -202,7 +205,7 @@ function controls() {
     wg: B('wg:start', '▶ Neues Spiel', 1),
     wv: B('wv:start', '▶ Neues Spiel', 1) + B('wv:endturn', '⏭ Durchgang beenden'),
   };
-  return `<details class="card"><summary>🎬 Spielsteuerung (geht auch ohne TV – antippen)</summary>${map[S.game] || ''}</details>`;
+  return `<details class="card"><summary>🎬 Spielsteuerung (geht auch ohne TV – antippen)</summary>${switcher}${map[S.game] || ''}</details>`;
 }
 function render() {
   const el = document.getElementById('game');

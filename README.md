@@ -50,6 +50,12 @@ Erwartete Ausgabe am Ende:
 6. Geheimworte: Chef-Ansicht (Farb-Schlüssel) vs. Rate-Ansicht (Wörter antippen) auf dem Handy. Bluff: Hole Cards geheim, Check/Call/Fold-Buttons, Pot + Community Cards auf TV. Malen: Finger-Canvas auf Handy (5 Farben), Raten per Text, Punkte für Rater + Maler. Würfel: Würfel antippen = halten, Kategorien-Blatt, Bonus ab 63. Wortverbot: Karte nur für Erklärer + Gegner-Team sichtbar, Richtig/Skip/Verstoß-Buttons, Teamwechsel nach 60 s.
 7. **Komfort:** „🔔 DU bist am Zug“ + Ton/Vibration, Online-Punkte (●/○), Sitz/Hand/Punkte überleben WLAN-Abbrüche (autom. Reconnect, 10 Min. Karenz). Offline-Spieler bei Farbrausch per „⏭ Zug überspringen“ übergehbar.
 
+## Neu in v0.6.2 (Spielwahl + Quiz-Fluss)
+
+- **Spielwahl geht immer:** TV-Picker sperrt nichts mehr (Mindestspieler nur als Hinweis) + **Handys können das Spiel wechseln** (🎬 Steuerung → Icon-Leiste) – kein Festkleben auf Quiz mehr, auch ohne TV
+- **Quiz läuft von allein:** nach Reveal automatisch nächste Frage (6 s), TV-„Weiter" nur noch zum Überspringen; Neustart mitten im Reveal ist timersicher (kein Phantom-Skip)
+- Geprüft: Handy→TV Spielwechsel, Auto-Weiter, manueller Skip, 246 Render-Pfade
+
 ## Neu in v0.6.1 (Spiel-Systematik)
 
 - **Quiz-Progress auf TV:** „X / Y Antworten drin" + ✅/⏳ pro Spieler (auch auf Handys sichtbar)
