@@ -1209,8 +1209,8 @@ function quizReveal(room) {
   const correct = QUIZ[room.quiz.qIndex].a;
   const res = [];
   for (const [id, ch] of Object.entries(room.quiz.answers)) {
-    if (ch === correct) { room.quiz.scores[id] = (room.quiz.scores[id] || 0) + 100; res.push({ name: nameOf(room, id), ok: true }); }
-    else res.push({ name: nameOf(room, id), ok: false });
+    if (ch === correct) { room.quiz.scores[id] = (room.quiz.scores[id] || 0) + 100; res.push({ id, name: nameOf(room, id), ok: true }); }
+    else res.push({ id, name: nameOf(room, id), ok: false });
   }
   room.quiz.lastResult = { correct, correctText: QUIZ[room.quiz.qIndex].choices[correct], question: QUIZ[room.quiz.qIndex].q, detail: res };
   room.quiz.phase = 'reveal';

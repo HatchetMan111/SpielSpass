@@ -50,6 +50,13 @@ Erwartete Ausgabe am Ende:
 6. Geheimworte: Chef-Ansicht (Farb-Schlüssel) vs. Rate-Ansicht (Wörter antippen) auf dem Handy. Bluff: Hole Cards geheim, Check/Call/Fold-Buttons, Pot + Community Cards auf TV. Malen: Finger-Canvas auf Handy (5 Farben), Raten per Text, Punkte für Rater + Maler. Würfel: Würfel antippen = halten, Kategorien-Blatt, Bonus ab 63. Wortverbot: Karte nur für Erklärer + Gegner-Team sichtbar, Richtig/Skip/Verstoß-Buttons, Teamwechsel nach 60 s.
 7. **Komfort:** „🔔 DU bist am Zug“ + Ton/Vibration, Online-Punkte (●/○), Sitz/Hand/Punkte überleben WLAN-Abbrüche (autom. Reconnect, 10 Min. Karenz). Offline-Spieler bei Farbrausch per „⏭ Zug überspringen“ übergehbar.
 
+## Neu in v0.6.3 (Visual + Ergebnis-Feeling)
+
+- **Bingo-TV ist eine echte Tafel:** alle 75 Zahlen im B/I/N/G/O-Raster, Gezogene grün, aktuelle pulsiert
+- **Siege fühlen sich an:** Konfetti-Regen + Fanfare auf dem TV, Fanfare + Vibration auf Handys (einmalig pro Sieg)
+- **Quiz persönlich:** Handy zeigt „✅ Richtig! +100" oder „❌ – richtig wäre X" statt nur „warten"
+- **Mehr Vorschau:** Vier-Brett auch auf Handy, Farbrausch-Topkarte groß, Bingo-Zahl riesig
+
 ## Neu in v0.6.2 (Spielwahl + Quiz-Fluss)
 
 - **Spielwahl geht immer:** TV-Picker sperrt nichts mehr (Mindestspieler nur als Hinweis) + **Handys können das Spiel wechseln** (🎬 Steuerung → Icon-Leiste) – kein Festkleben auf Quiz mehr, auch ohne TV

@@ -107,6 +107,64 @@ function render() {
   if (S.game === 'quiz') renderQuiz(); else if (S.game === 'chess') renderChess(); else if (S.game === 'fr') renderFr();
   else if (S.game === 'slf') renderSlf(); else if (S.game === 'bingo') renderBingo(); else if (S.game === 'vier') renderVier(); else if (S.game === 'wolf') renderWolf();
   else if (S.game === 'gw') renderGw(); else if (S.game === 'bluff') renderBluff(); else if (S.game === 'mr') renderMr(); else if (S.game === 'wg') renderWg(); else renderWv();
+  maybeCelebrate();
+}
+// ---- Sieg-Inszenierung: Konfetti + Fanfare (einmal pro Sieg) ----
+let lastWinKey = null, audioOK = false;
+document.addEventListener('pointerdown', () => { audioOK = true; }, { once: true });
+function tone(f, t0, dur) {
+  try {
+    const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
+    const ctx = new C(), o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination); o.frequency.value = f; g.gain.value = 0.1;
+    const t = ctx.currentTime + t0;
+    o.start(t); o.stop(t + dur); setTimeout(() => ctx.close(), (t0 + dur + 0.2) * 1000);
+  } catch (e) {}
+}
+function fanfare() { if (!audioOK) return; [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.14, 0.22)); }
+function winKey() {
+  if (!S) return null;
+  if (S.quiz && S.quiz.phase === 'done') return 'quiz';
+  if (S.fr && S.fr.winner) return 'fr:' + S.fr.winner;
+  if (S.vier && S.vier.winner) return 'vier:' + S.vier.winner;
+  if (S.bingo && S.bingo.winner) return 'bingo:' + S.bingo.winner;
+  if (S.wolf && S.wolf.winner) return 'wolf:' + S.wolf.winner;
+  if (S.gw && S.gw.winner) return 'gw:' + S.gw.winner;
+  if (S.bluff && S.bluff.phase === 'done') return 'bluff:' + (S.bluff.winners || []).join(',');
+  if (S.wg && S.wg.done) return 'wg:' + (S.wg.winners || []).join(',');
+  return null;
+}
+function maybeCelebrate() {
+  const k = winKey();
+  if (k && k !== lastWinKey) { lastWinKey = k; confetti(); fanfare(); }
+  if (!k) lastWinKey = null;
+}
+function confetti() {
+  try {
+    const cv = document.getElementById('confetti');
+    if (!cv) return;
+    cv.width = window.innerWidth; cv.height = window.innerHeight;
+    const ctx = cv.getContext('2d');
+    const cols = ['#f87171', '#fbbf24', '#34d399', '#60a5fa', '#c084fc', '#f472b6'];
+    const ps = Array.from({ length: 120 }, () => ({
+      x: Math.random() * cv.width, y: -20 - Math.random() * cv.height * 0.3,
+      w: 6 + Math.random() * 6, h: 8 + Math.random() * 8,
+      c: cols[Math.floor(Math.random() * cols.length)],
+      vy: 2 + Math.random() * 3, vx: -1.5 + Math.random() * 3, r: Math.random() * Math.PI, vr: -0.1 + Math.random() * 0.2,
+    }));
+    const t0 = Date.now();
+    (function tick() {
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      for (const p of ps) {
+        p.x += p.vx; p.y += p.vy; p.r += p.vr;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
+        ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.restore();
+      }
+      if (Date.now() - t0 < 3200) requestAnimationFrame(tick);
+      else ctx.clearRect(0, 0, cv.width, cv.height);
+    })();
+  } catch (e) {}
 }
 function renderQuiz() {
   if (!S.quiz || S.quiz.phase === 'lobby') { stage.innerHTML = '<div class="tv-big">Quiz bereit – „Quiz starten“ drücken</div>'; return; }
@@ -182,11 +240,16 @@ function renderSlf() {
 }
 function renderBingo() {
   if (!S.bingo) { stage.innerHTML = '<div class="tv-big">Bingo bereit – „Neues Spiel“ drücken</div>'; return; }
-  const B = S.bingo;
+  const B = S.bingo, drawn = new Set(B.drawn);
+  const cols = [['B', 1], ['I', 16], ['N', 31], ['G', 46], ['O', 61]];
   let h = `<div class="muted center">Gezogen: ${B.drawn.length}/75</div>`;
   h += `<div class="tv-big">${B.current ? '🎱 ' + B.current : '–'}</div>`;
-  if (B.drawn.length) h += `<div class="card center">Letzte: ${B.drawn.slice(-8).join(', ')}</div>`;
-  h += `<div class="card"><h2>Mitspieler (${B.players.length})</h2>${B.players.map(esc).join(', ')}</div>`;
+  h += '<div class="bgboard">' + cols.map(([L, lo]) => {
+    let c = `<div class="bgcol"><div class="bgcell head">${L}</div>`;
+    for (let n = lo; n < lo + 15; n++) c += `<div class="bgcell${drawn.has(n) ? ' hit' : ''}${B.current === n ? ' cur' : ''}">${n}</div>`;
+    return c + '</div>';
+  }).join('') + '</div>';
+  h += `<div class="card"><h2>Mitspieler (${B.players.length})</h2>${B.players.map(esc).join(', ') || '<span class="muted">–</span>'}</div>`;
   if (B.winner) h += `<div class="tv-big">🏆 BINGO! ${esc(B.winner)}</div>`;
   stage.innerHTML = h;
 }

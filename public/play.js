@@ -101,16 +101,21 @@ function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ 
 // Ton + Vibration bei "Du bist dran" (offline, WebAudio)
 let audioOK = false;
 document.addEventListener('pointerdown', () => { audioOK = true; }, { once: true });
-function beep() {
+function beep(freq, when, dur) {
   try {
     if (audioOK && (window.AudioContext || window.webkitAudioContext)) {
       const C = window.AudioContext || window.webkitAudioContext, ctx = new C();
       const o = ctx.createOscillator(), g = ctx.createGain();
-      o.connect(g); g.connect(ctx.destination); o.frequency.value = 880; g.gain.value = 0.12;
-      o.start(); o.stop(ctx.currentTime + 0.18); setTimeout(() => ctx.close(), 400);
+      o.connect(g); g.connect(ctx.destination); o.frequency.value = freq || 880; g.gain.value = 0.12;
+      const t = ctx.currentTime + (when || 0);
+      o.start(t); o.stop(t + (dur || 0.18)); setTimeout(() => ctx.close(), ((when || 0) + (dur || 0.18) + 0.2) * 1000);
     }
   } catch (e) {}
-  try { if (navigator.vibrate) navigator.vibrate([120, 60, 120]); } catch (e) {}
+  try { if (navigator.vibrate && !when) navigator.vibrate([120, 60, 120]); } catch (e) {}
+}
+function fanfare() {
+  [523, 659, 784, 1047].forEach((f, i) => beep(f, i * 0.14, 0.22));
+  try { if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]); } catch (e) {}
 }
 function turnInfo() {
   if (!S) return null;
@@ -181,7 +186,11 @@ function turnInfo() {
 function banner() {
   const ti = turnInfo();
   if (!ti) return '';
-  if (ti.key !== lastKey) { lastKey = ti.key; if (ti.mine) beep(); }
+  if (ti.key !== lastKey) {
+    lastKey = ti.key;
+    if (/🏆/.test(ti.text)) fanfare();
+    else if (ti.mine) beep();
+  }
   return `<div class="turnb${ti.mine ? ' me' : ''}">${esc(ti.text)}</div>`;
 }
 function controls() {
@@ -214,16 +223,20 @@ function render() {
   if (S.game === 'quiz') {
     if (!S.quiz || S.quiz.phase === 'lobby') { el.innerHTML = head + '<div class="card">Warte auf Start… oder starte selbst unten.</div>' + controls(); return; }
     if (S.quiz.phase === 'done') { el.innerHTML = head + '<div class="card"><h2>Fertig!</h2>Sieh aufs TV für das Ergebnis.</div>' + controls(); return; }
-    if (S.quiz.phase === 'reveal') { el.innerHTML = head + '<div class="card">Auswertung läuft – warte auf nächste Frage…</div>' + controls(); return; }
+    if (S.quiz.phase === 'reveal') {
+      const me = (S.quiz.lastResult.detail || []).find(d => d.id === s.id);
+      const myLine = me ? (me.ok ? '<div class="tv-big">✅ Richtig! +100</div>' : `<div class="tv-big">❌ Leider falsch</div><div class="center">Richtig: <b>${esc(S.quiz.lastResult.correctText)}</b></div>`) : '';
+      el.innerHTML = head + '<div class="card">' + myLine + '<div class="muted center">Nächste Frage kommt automatisch…</div></div>' + controls(); return;
+    }
     el.innerHTML = head + '<div class="card"><h2>' + esc(S.quiz.current.q) + '</h2>' +
       S.quiz.current.choices.map((t, i) => `<button class="btn alt qchoice" onclick="answer(${i})">${i + 1}. ${esc(t)}</button>`).join('') +
       (S.quiz.haveAnswered && S.quiz.haveAnswered[s.id] ? '<p class="muted center">Antwort abgegeben ✓ – warte auf die anderen…</p>' : '') + '</div>' + controls();
   } else if (S.game === 'chess') {
     renderChessC(el, head);
   } else if (S.game === 'fr') {
-    el.innerHTML = head + '<div class="card"><h2>Farbrausch</h2><div id="hand"></div><button class="btn alt" onclick="draw()">Karte ziehen</button>' +
-      '<div class="row"><select id="wildc"><option value="R">Rot</option><option value="G">Grün</option><option value="B">Blau</option><option value="Y">Gelb</option></select></div>' +
-      '<p class="muted">Top: ' + (S.fr ? esc(S.fr.top.value + ' ' + S.fr.top.color) + ' · Farbe ' + esc(S.fr.color) + ' · am Zug ' + esc(S.fr.turn) : 'noch nicht gegeben') + '</p></div>' + controls();
+    const top = S.fr ? `<div class="topcard U${S.fr.color}">${esc(S.fr.top.value)} (${esc(S.fr.top.color)})</div><div class="muted center">Am Zug: ${esc(S.fr.turn)}${S.fr.turnOnline === false ? ' (offline)' : ''}</div>` : '<p class="muted">Noch nicht gegeben.</p>';
+    el.innerHTML = head + '<div class="card"><h2>Farbrausch</h2>' + top + '<div id="hand"></div><button class="btn alt" onclick="draw()">Karte ziehen</button>' +
+      '<div class="row"><select id="wildc"><option value="R">Rot</option><option value="G">Grün</option><option value="B">Blau</option><option value="Y">Gelb</option></select></div></div>' + controls();
     fetchHand();
   } else if (S.game === 'slf') renderSlfC(el, head);
   else if (S.game === 'bingo') renderBingoC(el, head);
@@ -322,7 +335,8 @@ function renderBingoC(el, head) {
   if (!B) { el.innerHTML = head + '<div class="card">Warte auf Start… oder starte selbst unten.</div>' + controls(); return; }
   myDrawn = B.drawn;
   if (B.phase === 'done') { el.innerHTML = head + '<div class="card"><h2>🏆 BINGO! Gewinner siehe TV.</h2><div id="bgrid"></div></div>' + controls(); s.emit('bingo:card'); return; }
-  el.innerHTML = head + '<div class="card"><h2>🎱 Bingo</h2><div class="muted">Zuletzt: <b>' + (B.current || '–') + '</b> · ' + B.drawn.length + '/75</div><div id="bgrid"></div>' +
+  el.innerHTML = head + '<div class="card"><h2>🎱 Bingo</h2>' +
+    `<div class="bignum">${B.current ? '🎱 ' + B.current : '–'}</div><div class="muted center">` + B.drawn.length + '/75 gezogen</div><div id="bgrid"></div>' +
     '<button class="btn warn" onclick="s.emit(\'bingo:claim\',r=>{if(!r.ok)alert(r.err||\'Fehler\')})">BINGO rufen!</button></div>' + controls();
   s.emit('bingo:card');
 }
@@ -330,7 +344,9 @@ function renderBingoC(el, head) {
 function renderVierC(el, head) {
   const V = S.vier;
   if (!V) { el.innerHTML = head + '<div class="card">Warte auf TV…</div>' + controls(); return; }
-  el.innerHTML = head + `<div class="card"><h2>Vier in einer Reihe</h2>
+  const mini = '<div class="vboard small">' + V.board.map(row => row.map(v =>
+    `<div class="vcell${v === 'R' ? ' vr' : v === 'Y' ? ' vy' : ''}">${v ? '●' : ''}</div>`).join('')).join('') + '</div>';
+  el.innerHTML = head + `<div class="card"><h2>Vier in einer Reihe</h2>${mini}
     <div class="row"><button class="btn alt" onclick="s.emit('vier:seat',{color:'R'})">🔴 Rot ${esc(V.r || '')}${V.r && !V.rOnline ? ' (offline)' : ''}</button><button class="btn alt" onclick="s.emit('vier:seat',{color:'Y'})">🟡 Gelb ${esc(V.y || '')}${V.y && !V.yOnline ? ' (offline)' : ''}</button></div>
     <div class="center muted">Am Zug: ${V.turn === 'R' ? '🔴 Rot' : '🟡 Gelb'}</div>
     <div class="vdrop">${[0, 1, 2, 3, 4, 5, 6].map(c => `<button class="btn" onclick="s.emit('vier:drop',{col:${c}},r=>{if(!r.ok)alert(r.err)})">↓${c + 1}</button>`).join('')}</div>
